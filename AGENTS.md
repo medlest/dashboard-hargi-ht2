@@ -50,8 +50,10 @@ npm run dev -- --port 3200         # dev
 npx tsc --noEmit                   # WAJIB hijau sebelum commit
 ```
 
-- Branch fitur → PR ke `main`. **Merge/push ke `main` = deploy production
-  otomatis** (Vercel, Root Directory `app/`). Setiap PR dapat Preview URL.
+- **Push ke `main` = deploy production otomatis** (Vercel, Root Directory
+  `app/`). Push langsung ke `main` diperbolehkan — pastikan `npx tsc --noEmit`
+  hijau dulu, karena yang ke-push langsung tayang. Untuk perubahan besar/
+  berisiko, boleh pakai branch + PR (dapat Preview URL otomatis).
 - Hit pertama route di dev = compile Turbopack (bisa lama) — bukan error.
 - Cek kesehatan DB: `curl localhost:3200/api/ping-db`.
 - Edge Function (`EF/hargi-refresh/`) TIDAK ikut deploy Vercel — deploy

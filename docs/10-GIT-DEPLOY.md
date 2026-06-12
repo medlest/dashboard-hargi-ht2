@@ -29,33 +29,31 @@ dashboard-hargi-ht2/
 - `DASAR APLIKASI/` + `*.rar` — baseline aplikasi lama (referensi lokal)
 - screenshot/scratch file
 
-## Alur deploy
+## Alur deploy (trunk-based — keputusan owner 2026-06-13)
 
 ```
-feature branch ── Pull Request ──► review ──► merge ke main
-      │                                            │
-      └──► Vercel PREVIEW deploy per PR            └──► Vercel PRODUCTION deploy
-           (URL unik otomatis, buat ngecek)             https://dashboard-hargi-ht2.vercel.app
+git push ke main ──► Vercel build otomatis ──► PRODUCTION
+                                               https://dashboard-hargi-ht2.vercel.app
 ```
 
-- **Push/merge ke `main` = production deploy otomatis.** Tidak ada langkah
-  manual.
-- Setiap PR otomatis dapat **Preview URL** dari Vercel — review visual tanpa
-  menyentuh production.
+- **Push ke `main` = production deploy otomatis.** Tidak ada langkah manual,
+  tidak wajib PR — yang ke-push langsung tayang, jadi pastikan
+  `npx tsc --noEmit` hijau dan dicek di dev lokal dulu.
+- Branch + PR **opsional**, dipakai untuk perubahan besar/berisiko — tiap PR
+  otomatis dapat **Preview URL** (Deployment Protection sudah dimatikan,
+  preview bisa dibuka tanpa akun Vercel).
 - Vercel project setting penting: **Root Directory = `app/`** (karena repo
   berisi EF & docs juga).
 
-## Workflow kolaborasi yang disarankan
+## Workflow harian
 
 ```bash
-git clone git@github.com:Asdig-UPTBogor/dashboard-hargi-ht2.git
-cd dashboard-hargi-ht2
-git checkout -b fitur/nama-fitur
+git clone git@github.com:medlest/dashboard-hargi-ht2.git
+cd dashboard-hargi-ht2/app
 # ... kerja (lihat 11-DEV-LOKAL.md) ...
 npx tsc --noEmit          # wajib hijau sebelum push
 git commit -am "feat: ..."
-git push -u origin fitur/nama-fitur
-# buka PR di GitHub → cek Preview URL → merge
+git push                  # → production
 ```
 
 Konvensi:
