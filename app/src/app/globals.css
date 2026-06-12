@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f3f5f9;
+  --bg-photo: url("/backgrounds/gi-light.webp");
+  --bg-veil: linear-gradient(180deg, rgba(243, 245, 249, 0.72) 0%, rgba(243, 245, 249, 0.5) 45%, rgba(243, 245, 249, 0.85) 100%);
+  --surface: rgba(255, 255, 255, 0.74);
+  --surface-solid: #ffffff;
+  --surface-2: rgba(228, 232, 241, 0.85);
+  --edge: rgba(15, 23, 42, 0.1);
+  --edge-strong: rgba(15, 23, 42, 0.18);
+  --ink: #0f172a;
+  --ink-2: #45556c;
+  --ink-3: #7c8aa0;
+  --accent: #4338ca;
+  --accent-soft: rgba(67, 56, 202, 0.09);
+  --amber: #d97706;
+  --chart-grid: rgba(15, 23, 42, 0.07);
+  --chart-border: #ffffff;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -20px rgba(15, 23, 42, 0.3);
+}
+
+.dark {
+  --bg: #0a101f;
+  --bg-photo: url("/backgrounds/gi-dark.webp");
+  --bg-veil: linear-gradient(180deg, rgba(8, 13, 26, 0.68) 0%, rgba(8, 13, 26, 0.46) 45%, rgba(8, 13, 26, 0.86) 100%);
+  --surface: rgba(15, 23, 41, 0.72);
+  --surface-solid: #101828;
+  --surface-2: rgba(26, 37, 60, 0.85);
+  --edge: rgba(148, 163, 184, 0.14);
+  --edge-strong: rgba(148, 163, 184, 0.25);
+  --ink: #e2e8f0;
+  --ink-2: #94a3b8;
+  --ink-3: #64748b;
+  --accent: #818cf8;
+  --accent-soft: rgba(129, 140, 248, 0.13);
+  --amber: #fbbf24;
+  --chart-grid: rgba(148, 163, 184, 0.09);
+  --chart-border: #101828;
+  --shadow: 0 1px 2px rgba(2, 6, 23, 0.4), 0 12px 32px -20px rgba(2, 6, 23, 0.9);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-2: var(--surface-2);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-amber: var(--amber);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
+}
+
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+
+/* Backdrop foto Gardu Induk (ikut theme) + veil biar konten kebaca */
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-app-sans), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image: var(--bg-photo);
+  background-size: cover;
+  background-position: center;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--bg-veil);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.card-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.num {
+  font-family: var(--font-app-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Staggered reveal saat load */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.rise-1 { animation-delay: 0.02s; } .rise-2 { animation-delay: 0.05s; }
+.rise-3 { animation-delay: 0.08s; } .rise-4 { animation-delay: 0.11s; }
+.rise-5 { animation-delay: 0.15s; } .rise-6 { animation-delay: 0.19s; }
+
+@keyframes pulse-bolt {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.4)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.85)); transform: scale(1.07); }
+}
+.bolt { animation: pulse-bolt 2.4s ease-in-out infinite; color: var(--amber); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin 0.9s linear infinite; }
+
+.scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+}
+
+/* MapLibre */
+.maplibregl-popup-content {
+  background: var(--surface-solid);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--font-app-sans), sans-serif;
+}
+.maplibregl-popup-tip { border-top-color: var(--surface-solid) !important; }
+.maplibregl-ctrl-group {
+  background: var(--surface-solid);
+  border: 1px solid var(--edge);
+}
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--edge); }
+
+/* Slide deck fullscreen — bawa foto GI + veil sendiri
+   (body::before gak ikut ke elemen yang di-fullscreen) */
+.deck {
+  background-color: var(--bg);
+  background-image: var(--bg-veil), var(--bg-photo);
+  background-size: cover, cover;
+  background-position: center, center;
+}

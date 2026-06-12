@@ -1,0 +1,21 @@
+# dependencies & build
+node_modules/
+.next/
+out/
+
+# env & secrets — JANGAN PERNAH di-commit (set di Vercel / .env.local)
+.env*
+
+# vercel project link lokal
+.vercel/
+
+# catatan kerja internal owner (bukan bagian repo publik tim)
+CLAUDE.md
+
+# baseline aplikasi lama (referensi lokal, berat — lihat docs/AUDIT_BASELINE.md)
+DASAR APLIKASI/
+*.rar
+
+# OS / editor
+.DS_Store
+*.log
