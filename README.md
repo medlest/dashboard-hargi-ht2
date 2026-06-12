@@ -22,6 +22,9 @@ GitHub main ──push──► Vercel (sin1) ──► Next.js 16 + ECharts + M
 semua dokumen (arsitektur, sumber data, sync, database, aplikasi, deploy,
 troubleshooting, keputusan teknis).
 
+Pakai AI coding agent (Claude Code, dsb.)? Aturan mainnya ada di
+[`AGENTS.md`](./AGENTS.md) — dibaca otomatis oleh agent.
+
 ## Struktur repo
 
 | Folder | Isi |

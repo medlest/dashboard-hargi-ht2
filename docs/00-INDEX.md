@@ -33,6 +33,7 @@
 | 12 | [OPERASIONAL](./12-OPERASIONAL.md) | Refresh data, audit, troubleshooting |
 | 13 | [KEPUTUSAN-TEKNIS](./13-KEPUTUSAN-TEKNIS.md) | ADR: keputusan penting + alasannya (jangan diulang debat) |
 | — | [AUDIT_BASELINE](./AUDIT_BASELINE.md) | Audit aplikasi lama (Angular+FastAPI) yang digantikan dashboard ini |
+| — | [../AGENTS.md](../AGENTS.md) | Instruksi untuk **AI coding agent** (aturan keras + workflow) — dibaca otomatis oleh Claude Code dkk. |
 
 ## Peta sistem 10 detik
 
