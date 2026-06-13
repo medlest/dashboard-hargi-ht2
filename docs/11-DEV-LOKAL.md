@@ -12,13 +12,20 @@ cd dashboard-hargi-ht2/app
 npm install
 ```
 
-Buat `app/.env.local` (file ini di-gitignore — minta nilai ke owner):
+Buat env lokal dari template (nilainya minta ke owner via japri — JANGAN
+pernah di-commit):
 
+```bash
+cp .env.example .env.local   # lalu isi nilainya
 ```
-DB_URL=postgresql://...pooler.supabase.com:6543/postgres
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-```
+
+Tiga variabel yang dibutuhkan (penjelasan lengkap ada di `.env.example`):
+
+| Var | Isi |
+|---|---|
+| `DB_URL` | koneksi Postgres pooler — kolaborator memakai role **`ht2_app`**: CRUD penuh di schema `hargi_ht2` SAJA, schema lain ditolak |
+| `SUPABASE_URL` | URL project Supabase (untuk tombol Refresh) |
+| `SUPABASE_PUBLISHABLE_KEY` | bearer pemanggilan EF |
 
 ## Perintah harian
 

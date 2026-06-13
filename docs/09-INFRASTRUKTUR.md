@@ -39,6 +39,13 @@ Minta nilainya ke owner.
 | Edge Function | `hargi-refresh` ([03-SYNC-EDGE-FUNCTION](./03-SYNC-EDGE-FUNCTION.md)), `verify_jwt: true` |
 | Vault secret | `platform_google_api_key` — key Service Account untuk metadata Drive (HANYA dipakai EF) |
 
+### Role database
+
+| Role | Dipakai | Hak |
+|---|---|---|
+| `postgres` | production Vercel + EF (internal owner) | penuh — TIDAK dibagikan |
+| `ht2_app` | dev lokal kolaborator | CRUD + CREATE **hanya** di schema `hargi_ht2` (RLS policy per tabel); schema lain `permission denied`. Cabut akses: `drop owned by ht2_app; drop role ht2_app;` |
+
 ### Kenapa pooler :6543, bukan direct :5432
 
 Vercel = serverless: banyak instance pendek umur. Transaction pooler

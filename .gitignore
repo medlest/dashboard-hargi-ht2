@@ -5,6 +5,7 @@ out/
 
 # env & secrets — JANGAN PERNAH di-commit (set di Vercel / .env.local)
 .env*
+!.env.example
 
 # vercel project link lokal
 .vercel/
