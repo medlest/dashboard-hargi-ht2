@@ -17,6 +17,7 @@ const LEVEL_ACCENT: Record<string, { a: string; a2: string; nick: string }> = {
   "Switch Yard": { a: "#6366f1", a2: "#818cf8", nick: "SY" },
   "MV Apparatus": { a: "#06b6d4", a2: "#22d3ee", nick: "MV" },
   Trafo: { a: "#f59e0b", a2: "#fbbf24", nick: "TRF" },
+  GIS: { a: "#ec4899", a2: "#f472b6", nick: "GIS" },
 };
 const FALLBACK_ACCENT = { a: "#94a3b8", a2: "#cbd5e1", nick: "—" };
 
@@ -33,7 +34,7 @@ export function HeroCE({
 }) {
   return (
     <div className="card overflow-hidden">
-      <div className="grid grid-cols-1 divide-y divide-edge lg:[grid-template-columns:1.618fr_1px_1fr_1px_1fr_1px_1fr] lg:divide-y-0">
+      <div className="grid grid-cols-1 divide-y divide-edge lg:[grid-template-columns:1.4fr_1px_1fr_1px_1fr_1px_1fr_1px_1fr] lg:divide-y-0">
         <TotalPanel stats={stats} />
         {levels.map((l) => {
           const acc = LEVEL_ACCENT[l.level] ?? FALLBACK_ACCENT;

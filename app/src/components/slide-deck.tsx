@@ -19,7 +19,15 @@ export function DeckB({ children }: { children: ReactNode }) {
   return <b className="num font-semibold text-ink">{children}</b>;
 }
 
-export function Deck({ slides, onExit }: { slides: DeckSlide[]; onExit: () => void }) {
+export function Deck({ 
+  slides, 
+  onExit,
+  filters
+}: { 
+  slides: DeckSlide[]; 
+  onExit: () => void;
+  filters?: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [slide, setSlide] = useState(0);
   const TOTAL = slides.length;
@@ -51,16 +59,30 @@ export function Deck({ slides, onExit }: { slides: DeckSlide[]; onExit: () => vo
   }, [go, onExit, TOTAL]);
 
   return (
-    <div ref={ref} className="deck fixed inset-0 z-100 flex flex-col">
+    <div ref={ref} className="deck fixed inset-0 z-100 flex flex-col bg-bg">
       {/* progress bar atas */}
-      <div className="absolute inset-x-0 top-0 z-20 h-0.5 bg-ink-3/15">
+      <div className="absolute inset-x-0 top-0 z-50 h-0.5 bg-ink-3/15">
         <div
           className="h-full bg-amber transition-all duration-400 ease-out"
           style={{ width: `${((slide + 1) / TOTAL) * 100}%` }}
         />
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      {/* Filter & Close Bar (Top) */}
+      <div className="absolute inset-x-0 top-0 z-40 flex items-center justify-between px-8 py-4 pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-2">
+          {filters}
+        </div>
+        <button 
+          type="button" 
+          onClick={onExit} 
+          className="pointer-events-auto flex items-center gap-2 rounded-full bg-surface-2/80 px-4 py-2 text-[13px] font-medium text-red-400 backdrop-blur-md transition-colors hover:bg-red-400 hover:text-white"
+        >
+          <X className="h-4 w-4" /> Keluar Presentasi
+        </button>
+      </div>
+
+      <div className="relative min-h-0 flex-1 pt-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={slide}
@@ -120,25 +142,27 @@ export function DeckCover({
   title,
   description,
   stats,
+  children,
 }: {
   eyebrow: string;
   title: ReactNode;
   description: string;
   stats: { label: string; value: string; sub?: string }[];
+  children?: ReactNode;
 }) {
   return (
-    <section className="flex h-full flex-col justify-between px-14 pb-6 pt-12 md:px-24">
-      <div className="flex items-center gap-4 text-[12px] font-semibold uppercase tracking-[0.3em] text-amber">
+    <section className="flex h-full flex-col overflow-y-auto px-14 pb-12 pt-12 md:px-24 scrollbar-thin">
+      <div className="flex shrink-0 items-center gap-4 text-[12px] font-semibold uppercase tracking-[0.3em] text-amber">
         <span className="h-px w-12 bg-amber" />
         {eyebrow}
       </div>
 
-      <div>
+      <div className="shrink-0">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="text-[9vmin] font-bold leading-[1.04] tracking-tight"
+          className="mt-6 text-[9vmin] font-bold leading-[1.04] tracking-tight"
         >
           {title}
         </motion.h1>
@@ -156,16 +180,27 @@ export function DeckCover({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.5 }}
-        className={`grid max-w-4xl gap-3 ${stats.length >= 4 ? "grid-cols-4" : "grid-cols-3"}`}
+        className={`mt-8 shrink-0 grid max-w-5xl gap-3 ${stats.length >= 4 ? "grid-cols-4" : "grid-cols-3"}`}
       >
         {stats.map((s) => (
           <div key={s.label} className="card p-4">
-            <div className="card-title">{s.label}</div>
+            <div className="card-title text-[10px]">{s.label}</div>
             <div className="num mt-1 truncate text-2xl font-semibold">{s.value}</div>
             {s.sub && <div className="num mt-0.5 text-[11px] text-ink-3">{s.sub}</div>}
           </div>
         ))}
       </motion.div>
+
+      {children && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7, duration: 0.5 }}
+          className="mt-12 space-y-12"
+        >
+          {children}
+        </motion.div>
+      )}
     </section>
   );
 }

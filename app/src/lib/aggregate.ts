@@ -36,6 +36,7 @@ export type CeFilters = {
   sub_bidang: string[];
   level_anomali: string[];
   kondisi_akhir: string[];
+  is_gis?: boolean;
 };
 
 export function ceAvailableFilters(rows: CeRow[]): CeFilters {
@@ -48,13 +49,16 @@ export function ceAvailableFilters(rows: CeRow[]): CeFilters {
   };
 }
 
+const isGis = (gi: string) => /^(GIS|GISTET)\b/i.test((gi || "").trim());
+
 export function ceFilterRows(rows: CeRow[], f: CeFilters): CeRow[] {
   return rows.filter(
     (r) =>
       (f.upt.length === 0 || f.upt.includes(r.upt)) &&
       (f.sub_bidang.length === 0 || f.sub_bidang.includes(r.sub_bidang)) &&
       (f.level_anomali.length === 0 || f.level_anomali.includes(r.level_anomali)) &&
-      (f.kondisi_akhir.length === 0 || f.kondisi_akhir.includes(r.kondisi_akhir)),
+      (f.kondisi_akhir.length === 0 || f.kondisi_akhir.includes(r.kondisi_akhir)) &&
+      (f.is_gis === undefined || isGis(r.gardu_induk) === f.is_gis),
   );
 }
 
@@ -77,6 +81,22 @@ function countBy2<T>(rows: T[], k1: (r: T) => string, k2: (r: T) => string) {
     if (!m.has(a)) m.set(a, new Map());
     const inner = m.get(a)!;
     inner.set(b, (inner.get(b) ?? 0) + 1);
+  }
+  return m;
+}
+
+function countBy3<T>(rows: T[], k1: (r: T) => string, k2: (r: T) => string, k3: (r: T) => string) {
+  const m = new Map<string, Map<string, Map<string, number>>>();
+  for (const r of rows) {
+    const a = k1(r);
+    const b = k2(r);
+    const c = k3(r);
+    if (!a || !b) continue;
+    if (!m.has(a)) m.set(a, new Map());
+    const mb = m.get(a)!;
+    if (!mb.has(b)) mb.set(b, new Map());
+    const mc = mb.get(b)!;
+    mc.set(c, (mc.get(c) ?? 0) + 1);
   }
   return m;
 }
@@ -107,6 +127,18 @@ export function ceAggregate(rows: CeRow[]) {
     })
     .sort((a, b) => b.total - a.total);
 
+  // Rekap GIS: aggregate stats for rows where GI is GIS
+  const gisRows = rows.filter((r) => isGis(r.gardu_induk));
+  const gisTotal = gisRows.length;
+  const gisClosed = gisRows.filter((r) => isClosed(r.kondisi_akhir)).length;
+  const gisOpen = gisRows.filter((r) => isOpen(r.kondisi_akhir)).length;
+  const gisSummary = {
+    total: gisTotal,
+    closed: gisClosed,
+    open: gisOpen,
+    progress: gisTotal > 0 ? Math.round((gisClosed / gisTotal) * 10000) / 100 : 0,
+  };
+
   // Tabel ringkasan UPT: pecah per kondisi (VG/G/F/P/C) + total
   const uptSummary = [...byUpt.entries()]
     .map(([name, conds]) => {
@@ -120,7 +152,7 @@ export function ceAggregate(rows: CeRow[]) {
   return {
     stats: { total, closed, open, progress },
     kaSummary, kondisiTerkini, byUpt, bySubBidang, byLevel,
-    uraianTop, byLevelUraian, levelSummary, uptSummary,
+    uraianTop, byLevelUraian, levelSummary, uptSummary, gisSummary,
   };
 }
 
@@ -178,4 +210,62 @@ export function ggnAggregate(rows: GgnRow[]) {
     mk.set(r.kategori, (mk.get(r.kategori) ?? 0) + 1);
   }
   return { byKategori, byUnitKategori, byTahunBulan, byTahunKategori, byTahun, total: rows.length };
+}
+
+export type AboRow = {
+  no: string;
+  upt: string;
+  ultg: string;
+  gardu_induk: string;
+  jadwal_rencana: string;
+  realisasi: string;
+  status: string;
+  jenis_anomali: string;
+  status_fix: string;
+};
+
+export type AboFilters = {
+  upt: string[];
+  status: string[];
+  jenis_anomali: string[];
+  status_fix: string[];
+};
+
+export function aboAvailableFilters(rows: AboRow[]): AboFilters {
+  const uniq = (vals: string[]) => [...new Set(vals.filter(Boolean))].sort();
+  return {
+    upt: uniq(rows.map((r) => r.upt)),
+    status: uniq(rows.map((r) => r.status)),
+    jenis_anomali: uniq(rows.map((r) => r.jenis_anomali)),
+    status_fix: uniq(rows.map((r) => r.status_fix)),
+  };
+}
+
+export function aboFilterRows(rows: AboRow[], f: AboFilters): AboRow[] {
+  return rows.filter(
+    (r) =>
+      (f.upt.length === 0 || f.upt.includes(r.upt)) &&
+      (f.status.length === 0 || f.status.includes(r.status)) &&
+      (f.jenis_anomali.length === 0 || f.jenis_anomali.includes(r.jenis_anomali)) &&
+      (f.status_fix.length === 0 || f.status_fix.includes(r.status_fix)),
+  );
+}
+
+export function aboAggregate(rows: AboRow[]) {
+  const total = rows.length;
+  const closed = rows.filter((r) => (r.status_fix || "").toUpperCase() === "CLOSE").length;
+  const open = total - closed;
+  const progress = total > 0 ? Math.round((closed / total) * 10000) / 100 : 0;
+
+  const byUpt = countBy2(rows, (r) => r.upt, (r) => r.status_fix);
+  const byStatus = countBy(rows, (r) => r.status);
+  const byAnomali = countBy(rows, (r) => r.jenis_anomali);
+  const byAnomaliStatus = countBy2(rows, (r) => r.jenis_anomali, (r) => r.status_fix);
+  const byUptAnomali = countBy2(rows, (r) => r.upt, (r) => r.jenis_anomali);
+  const byUptAnomaliStatus = countBy3(rows, (r) => r.upt, (r) => r.jenis_anomali, (r) => r.status_fix);
+
+  return {
+    stats: { total, closed, open, progress },
+    byUpt, byStatus, byAnomali, byAnomaliStatus, byUptAnomali, byUptAnomaliStatus,
+  };
 }

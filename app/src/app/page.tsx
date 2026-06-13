@@ -8,30 +8,47 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-export default async function OverviewPage() {
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ unit?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const selUnits = params.unit ? (Array.isArray(params.unit) ? params.unit : [params.unit]) : [];
+
   // SATU statement SQL (JSON aggregate) = satu round-trip, satu koneksi.
-  // JANGAN pecah jadi Promise.all banyak query — pernah bikin pool rebutan
-  // + hasil kacau di dev (lihat CLAUDE.md catatan 2026-06-12).
   const [row] = (await sql`
     select
       (select jsonb_build_object(
          'total', count(*)::int,
          'closed', count(*) filter (where kondisi_akhir like '%1-%' or kondisi_akhir like '%2-%')::int,
          'open', count(*) filter (where kondisi_akhir like '%3-%' or kondisi_akhir like '%4-%' or kondisi_akhir like '%5-%')::int)
-       from hargi_ht2.ce_abo_findings) as ce,
+       from hargi_ht2.ce_abo_findings
+       where (upt = any(${selUnits}) or ${selUnits.length === 0})) as ce,
+       
+      (select jsonb_build_object(
+         'total', count(*)::int,
+         'closed', count(*) filter (where upper(status_fix) = 'CLOSE')::int,
+         'open', count(*) filter (where upper(status_fix) <> 'CLOSE' or status_fix is null)::int)
+       from hargi_ht2.abo_2026
+       where (upt = any(${selUnits}) or ${selUnits.length === 0})) as abo,
+
       (select jsonb_build_object(
          'total', count(*)::int,
          'units', count(distinct nullif(trim(unit), ''))::int)
-       from hargi_ht2.gangguan_trafo) as ggn,
+       from hargi_ht2.gangguan_trafo
+       where (unit = any(${selUnits}) or ${selUnits.length === 0})) as ggn,
       (select coalesce(jsonb_agg(x order by x.tahun), '[]'::jsonb) from (
          select trim(tahun) as tahun, count(*)::int as total
          from hargi_ht2.gangguan_trafo
          where coalesce(trim(tahun), '') <> ''
+           and (unit = any(${selUnits}) or ${selUnits.length === 0})
          group by 1) x) as ggn_years,
       (select coalesce(jsonb_agg(x), '[]'::jsonb) from (
          select trim(tahun) as tahun, trim(bulan) as bulan, count(*)::int as total
          from hargi_ht2.gangguan_trafo
          where coalesce(trim(tahun), '') <> '' and coalesce(trim(bulan), '') <> ''
+           and (unit = any(${selUnits}) or ${selUnits.length === 0})
          group by 1, 2) x) as ggn_months,
       (select coalesce(jsonb_agg(x order by x.total desc), '[]'::jsonb) from (
          select gardu,
@@ -58,6 +75,7 @@ export default async function OverviewPage() {
          where latitude ~ '^-?[0-9]+(\.[0-9]+)?$'
            and longitude ~ '^-?[0-9]+(\.[0-9]+)?$'
            and coalesce(trim(gardu), '') <> ''
+           and (unit = any(${selUnits}) or ${selUnits.length === 0})
          group by gardu) x) as gis,
       (select jsonb_build_object(
          'total', count(distinct upper(trim(gardu)))::int,
@@ -76,7 +94,8 @@ export default async function OverviewPage() {
              )
          )::int
        ) from hargi_ht2.gangguan_trafo
-       where coalesce(trim(gardu), '') <> '') as gi,
+       where coalesce(trim(gardu), '') <> ''
+         and (unit = any(${selUnits}) or ${selUnits.length === 0})) as gi,
       (select jsonb_build_object(
          'total', count(distinct trim(regexp_replace(nama_bay, '\s+\d+.*$', '')))::int,
          'year', count(distinct trim(regexp_replace(nama_bay, '\s+\d+.*$', ''))) filter (
@@ -94,7 +113,8 @@ export default async function OverviewPage() {
              )
          )::int
        ) from hargi_ht2.gangguan_trafo
-       where coalesce(trim(nama_bay), '') <> '') as trafo,
+       where coalesce(trim(nama_bay), '') <> ''
+         and (unit = any(${selUnits}) or ${selUnits.length === 0})) as trafo,
       (select to_jsonb(g) from (
          select gt.gardu, gt.nama_bay, gt.tgl_keluar, gt.unit,
                 -- ULTG gak ada di sheet gangguan — lookup dari tabel CE (nama GI identik)
@@ -104,6 +124,7 @@ export default async function OverviewPage() {
                  limit 1) as ultg
          from hargi_ht2.gangguan_trafo gt
          where gt.tgl_keluar ~ '^[0-9]{1,2}-[A-Za-z]{3}-[0-9]{2}$'
+           and (gt.unit = any(${selUnits}) or ${selUnits.length === 0})
          order by to_date(trim(gt.tgl_keluar), 'DD-Mon-YY') desc
          limit 1) g) as last_ggn,
       (select to_jsonb(m) from (
@@ -113,9 +134,13 @@ export default async function OverviewPage() {
                 to_char(finished_at at time zone 'Asia/Jakarta', 'DD Mon YYYY · HH24:MI') as synced_at
          from hargi_ht2.refresh_log
          where status = 'success' and finished_at is not null
-         order by id desc limit 1) m) as meta
+         order by id desc limit 1) m) as meta,
+      (select coalesce(jsonb_agg(distinct unit), '[]'::jsonb) 
+       from hargi_ht2.gangguan_trafo 
+       where coalesce(trim(unit), '') <> '' and unit <> '#N/A') as all_units
   `) as unknown as [{
     ce: CeSummaryRow;
+    abo: { total: number; closed: number; open: number };
     ggn: { total: number; units: number };
     ggn_years: YearCount[];
     ggn_months: MonthCount[];
@@ -124,19 +149,19 @@ export default async function OverviewPage() {
     trafo: { total: number; year: number; month: number };
     last_ggn: LastGgn | null;
     meta: MetaRow | null;
+    all_units: string[];
   }];
-  const { ce, ggn, ggn_years: ggnYears, gis, gi, trafo, meta } = row;
+  const { ce, abo, ggn, ggn_years: ggnYears, gis, gi, trafo, meta, all_units } = row;
 
   return (
-    // Satu layar penuh: tinggi = viewport - padding main (pt-4/md:pt-6), pb-12
-    // layout di-cancel via -mb-12 → hero flex-1 ngisi sisa tanpa space kosong
-    <div className="-mb-12 flex h-[calc(100dvh-1rem)] min-h-0 flex-col pb-4 md:h-[calc(100dvh-1.5rem)]">
+    <div className="space-y-6">
       <PageHeader
         title="Overview"
-        subtitle="Selamat datang — ringkasan seluruh data Hartrans 2 · UIT Jawa Bagian Tengah"
+        subtitle="Portal Ringkasan Data Hartrans 2 · UIT Jawa Bagian Tengah"
       />
       <OverviewView
         ce={ce}
+        abo={abo}
         ggn={ggn}
         ggnYears={ggnYears}
         ggnMonths={row.ggn_months}
@@ -145,11 +170,10 @@ export default async function OverviewPage() {
         trafo={trafo}
         lastGgn={row.last_ggn ?? null}
         meta={meta ?? null}
-        sources={{
-          ce: sheetEditUrl(CE_ABO_SHEET),
-          pareto: sheetEditUrl(PARETO_SHEET),
-        }}
+        units={all_units}
+        selectedUnits={selUnits}
       />
     </div>
   );
 }
+

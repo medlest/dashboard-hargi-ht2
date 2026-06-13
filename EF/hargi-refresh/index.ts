@@ -7,6 +7,7 @@ import Papa from "npm:papaparse@5.5.3";
 
 const CE_ABO = { id: "1-eC0GdeMwYDhnGzCSM8viO0HvD6X0NdlMaWOxe2P9ZM", gid: "299154811" };
 const PARETO = { id: "1hf_lpXI6x3hBDfEHX8r8q15w6F3wtlzIABGibdpCMhg", gid: "1882488493" };
+const ABO_2026 = { id: "11HQFitHH8xISZvVxuG0rd0q84Y6tOtCi7jO7wDbUeVs", gid: "1761063736" };
 
 type Row = Record<string, string>;
 
@@ -163,12 +164,43 @@ function mapPareto(rows: Row[]) {
     }));
 }
 
+function mapAbo2026(rows: Row[]) {
+  if (rows.length === 0) return [];
+  const headers = Object.keys(rows[0]);
+  const col = {
+    no: findCol(headers, "no"),
+    upt: headers.find((h) => h.toLowerCase() === "upt") ?? findCol(headers, "upt"),
+    ultg: headers.find((h) => h.toUpperCase() === "X") ?? findCol(headers, "x"),
+    gardu_induk: findCol(headers, "gardu", "induk"),
+    jadwal_rencana: findCol(headers, "jadwal", "rencana"),
+    realisasi: findCol(headers, "realisasi"),
+    status: findCol(headers, "status"),
+    jenis_anomali: findCol(headers, "jenis", "anomali"),
+    status_fix: findCol(headers, "status", "fix"),
+  };
+
+  return rows
+    .filter((r) => clean(r[col.upt]) !== "" || clean(r[col.gardu_induk]) !== "")
+    .map((r) => ({
+      no: clean(r[col.no]),
+      upt: clean(r[col.upt]),
+      ultg: clean(r[col.ultg]),
+      gardu_induk: clean(r[col.gardu_induk]),
+      jadwal_rencana: clean(r[col.jadwal_rencana]),
+      realisasi: clean(r[col.realisasi]),
+      status: clean(r[col.status]),
+      jenis_anomali: clean(r[col.jenis_anomali]),
+      status_fix: clean(r[col.status_fix]),
+      raw: r,
+    }));
+}
+
 
 // Metadata sheet (modifiedTime) via Drive API + SA platform-google-api (key di vault).
 // FAIL-SAFE: gagal = null, refresh tetap sukses. Timeout ketat 5 detik.
 // deno-lint-ignore no-explicit-any
 type Meta = { name: string | null; modifiedTime: string | null };
-async function fetchSheetMetadata(sql: any): Promise<{ ce: Meta; pareto: Meta }> {
+async function fetchSheetMetadata(sql: any): Promise<{ ce: Meta; pareto: Meta; abo: Meta }> {
   try {
     const [row] = await sql`
       select decrypted_secret from vault.decrypted_secrets
@@ -214,11 +246,15 @@ async function fetchSheetMetadata(sql: any): Promise<{ ce: Meta; pareto: Meta }>
       const j = await r.json();
       return { name: j.name ?? null, modifiedTime: j.modifiedTime ?? null };
     };
-    const [ce, pareto] = await Promise.all([getMod(CE_ABO.id), getMod(PARETO.id)]);
-    return { ce, pareto };
+    const [ce, pareto, abo] = await Promise.all([getMod(CE_ABO.id), getMod(PARETO.id), getMod(ABO_2026.id)]);
+    return { ce, pareto, abo };
   } catch (e) {
     console.error("[sheet-meta]", e instanceof Error ? e.message : e);
-    return { ce: { name: null, modifiedTime: null }, pareto: { name: null, modifiedTime: null } };
+    return { 
+      ce: { name: null, modifiedTime: null }, 
+      pareto: { name: null, modifiedTime: null },
+      abo: { name: null, modifiedTime: null }
+    };
   }
 }
 
@@ -238,39 +274,59 @@ Deno.serve(async (req: Request) => {
       insert into hargi_ht2.refresh_log (source) values ('all') returning id`;
     logId = logRow.id;
 
-    const [ceRaw, ggnRaw, meta] = await Promise.all([
+    const [ceRaw, ggnRaw, aboRaw, meta] = await Promise.all([
       fetchSheetFiltered(CE_ABO, (letterOf) => {
         const sb = letterOf("sub", "bidang");
         const st = letterOf("status", "terkini");
         return `${sb} contains 'HARGI' and (upper(${st}) = 'OPEN' or upper(${st}) = 'CLOSE')`;
       }),
       fetchSheetRows(PARETO),
+      fetchSheetRows(ABO_2026),
       fetchSheetMetadata(sql),
     ]);
     const ce = mapCeAbo(ceRaw);
     const ggn = mapPareto(ggnRaw);
+    const abo = mapAbo2026(aboRaw);
+
     if (ce.length === 0) throw new Error("Sheet CE ABO menghasilkan 0 baris — refresh dibatalkan.");
     if (ggn.length === 0) throw new Error("Sheet gangguan trafo menghasilkan 0 baris — refresh dibatalkan.");
 
     await sql.begin(async (tx) => {
       // advisory lock: 2 refresh barengan antri, gak saling hapus di tengah jalan
       await tx`select pg_advisory_xact_lock(421702)`;
+      
       await tx`delete from hargi_ht2.ce_abo_findings`;
       for (let i = 0; i < ce.length; i += 200) {
         await tx`insert into hargi_ht2.ce_abo_findings ${tx(ce.slice(i, i + 200))}`;
       }
+      
       await tx`delete from hargi_ht2.gangguan_trafo`;
       for (let i = 0; i < ggn.length; i += 200) {
         await tx`insert into hargi_ht2.gangguan_trafo ${tx(ggn.slice(i, i + 200))}`;
       }
+
+      await tx`delete from hargi_ht2.abo_2026`;
+      if (abo.length > 0) {
+        for (let i = 0; i < abo.length; i += 200) {
+          await tx`insert into hargi_ht2.abo_2026 ${tx(abo.slice(i, i + 200))}`;
+        }
+      }
     });
 
     await sql`update hargi_ht2.refresh_log
-      set status='success', row_count=${ce.length + ggn.length}, finished_at=now(),
-          sheet_modified_ce=${meta.ce.modifiedTime}, sheet_modified_pareto=${meta.pareto.modifiedTime},
-          sheet_name_ce=${meta.ce.name}, sheet_name_pareto=${meta.pareto.name}
+      set status='success', row_count=${ce.length + ggn.length + abo.length}, finished_at=now(),
+          sheet_modified_ce=${meta.ce.modifiedTime}, 
+          sheet_modified_pareto=${meta.pareto.modifiedTime},
+          sheet_name_ce=${meta.ce.name}, 
+          sheet_name_pareto=${meta.pareto.name}
       where id=${logId}`;
-    return new Response(JSON.stringify({ ok: true, ce_abo: ce.length, gangguan_trafo: ggn.length }), {
+    
+    return new Response(JSON.stringify({ 
+      ok: true, 
+      ce_abo: ce.length, 
+      gangguan_trafo: ggn.length,
+      abo_2026: abo.length 
+    }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
