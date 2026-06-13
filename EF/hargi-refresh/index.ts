@@ -317,8 +317,10 @@ Deno.serve(async (req: Request) => {
       set status='success', row_count=${ce.length + ggn.length + abo.length}, finished_at=now(),
           sheet_modified_ce=${meta.ce.modifiedTime}, 
           sheet_modified_pareto=${meta.pareto.modifiedTime},
+          sheet_modified_abo=${meta.abo.modifiedTime},
           sheet_name_ce=${meta.ce.name}, 
-          sheet_name_pareto=${meta.pareto.name}
+          sheet_name_pareto=${meta.pareto.name},
+          sheet_name_abo=${meta.abo.name}
       where id=${logId}`;
     
     return new Response(JSON.stringify({ 
