@@ -17,17 +17,23 @@ const EMPTY: CeFilters = { upt: [], sub_bidang: [], level_anomali: [], kondisi_a
 export function CeAboView({ rows }: { rows: CeRow[] }) {
   const t = useChartTheme();
   const [sel, setSel] = useState<CeFilters>(EMPTY);
-  const available = useMemo(() => ceAvailableFilters(rows), [rows]);
-  const filtered = useMemo(() => ceFilterRows(rows, sel), [rows, sel]);
+
+  // Pisahkan temuan aktif dari populasi penuh
+  const findings = useMemo(() => 
+    rows.filter(r => ["OPEN", "CLOSE"].includes((r.status_terkini || "").toUpperCase())),
+    [rows]
+  );
+
+  const available = useMemo(() => ceAvailableFilters(findings), [findings]);
+  const filtered = useMemo(() => ceFilterRows(findings, sel), [findings, sel]);
   const agg = useMemo(() => ceAggregate(filtered), [filtered]);
 
   const set = (k: keyof CeFilters) => (v: string[]) => setSel((s) => ({ ...s, [k]: v }));
 
-  // Hero: agregat dari baris yang lolos filter SELAIN level — panel level tetap
-  // kebaca semua (buat klik-filter), tapi tetap responsif ke filter UPT/SubBidang/KA.
+  // Hero: agregat dari baris temuan yang lolos filter SELAIN level
   const heroAgg = useMemo(
-    () => ceAggregate(ceFilterRows(rows, { ...sel, level_anomali: [], is_gis: undefined })),
-    [rows, sel],
+    () => ceAggregate(ceFilterRows(findings, { ...sel, level_anomali: [], is_gis: undefined })),
+    [findings, sel],
   );
   const activeLevel = sel.is_gis ? "GIS" : sel.level_anomali.length === 1 ? sel.level_anomali[0] : null;
   
@@ -39,11 +45,23 @@ export function CeAboView({ rows }: { rows: CeRow[] }) {
     }
   };
 
+  // Khusus chart TARGET AWAL: ambil data dari semua level (Trafo, Switch Yard, MV Apparatus, GIS)
+  // tapi tetap merespon filter UPT/SubBidang/KA yang dipilih.
+  // Gunakan 'rows' (populasi penuh) bukan 'findings'.
+  const targetAwalAgg = useMemo(
+    () => ceAggregate(ceFilterRows(rows, { ...sel, level_anomali: [], is_gis: undefined })),
+    [rows, sel],
+  );
+
   // ===== options ECharts =====
-  const condSlices = (m: Map<string, number>) =>
-    [...m.entries()]
-      .sort((a, b) => (parseInt(b[0]) || 0) - (parseInt(a[0]) || 0))
-      .map(([name, value]) => ({ name, value, color: conditionColor(name) }));
+  const condSlices = (m: Map<string, number>) => {
+    const categories = ["Critical", "Poor", "Fair", "Good", "Very Good"];
+    return categories.map(name => ({
+      name,
+      value: m.get(name) ?? 0,
+      color: conditionColor(name)
+    }));
+  };
 
   const toGrouped = (dist: Map<string, Map<string, number>>) => {
     const labels = [...dist.keys()].sort((a, b) => {
@@ -122,8 +140,8 @@ export function CeAboView({ rows }: { rows: CeRow[] }) {
 
       {/* Pie */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        <ChartCard title="Persentase Kondisi Akhir" className="rise rise-5 col-span-2 min-h-80 lg:col-span-2">
-          <EChart key={`ka-${t.key}`} option={pieOption(t, condSlices(agg.kaSummary))} />
+        <ChartCard title="TARGET AWAL" className="rise rise-5 col-span-2 min-h-80 lg:col-span-2">
+          <EChart key={`ka-${t.key}`} option={pieOption(t, condSlices(targetAwalAgg.kondisiAwal))} />
         </ChartCard>
 
         <ChartCard title="Kondisi Terkini (Current)" className="rise rise-5 col-span-2 min-h-72 lg:col-span-4">

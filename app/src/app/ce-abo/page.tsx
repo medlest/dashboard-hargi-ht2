@@ -13,8 +13,8 @@ export default async function CeAboPage() {
              coalesce(level_anomali,'') level_anomali, coalesce(uraian,'') uraian,
              coalesce(upt,'') upt, coalesce(ultg,'') ultg, coalesce(gardu_induk,'') gardu_induk,
              coalesce(nama_ruas_bay,'') nama_ruas_bay, coalesce(nama_alat,'') nama_alat,
-             coalesce(kondisi_terkini,'') kondisi_terkini, coalesce(kondisi_akhir,'') kondisi_akhir,
-             coalesce(status_terkini,'') status_terkini
+             coalesce(kondisi_terkini,'') kondisi_terkini, coalesce(kondisi_awal,'') kondisi_awal,
+             coalesce(kondisi_akhir,'') kondisi_akhir, coalesce(status_terkini,'') status_terkini
       from hargi_ht2.ce_abo_findings
       order by id`,
     sql`

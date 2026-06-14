@@ -12,6 +12,7 @@ export type CeRow = {
   nama_ruas_bay: string;
   nama_alat: string;
   kondisi_terkini: string;
+  kondisi_awal: string;
   kondisi_akhir: string;
   status_terkini: string;
 };
@@ -101,34 +102,74 @@ function countBy3<T>(rows: T[], k1: (r: T) => string, k2: (r: T) => string, k3: 
   return m;
 }
 
+function countByCond<T>(rows: T[], k1: (r: T) => string, k2: (r: T) => string) {
+  const m = new Map<string, Map<string, number>>();
+  const condMap: Record<string, string> = {
+    "1-": "Very Good", "2-": "Good", "3-": "Fair", "4-": "Poor", "5-": "Critical"
+  };
+  const normalize = (v: string) => {
+    const key = Object.keys(condMap).find(k => v.includes(k));
+    return key ? condMap[key] : v;
+  };
+
+  for (const r of rows) {
+    const a = k1(r);
+    const b = normalize(k2(r));
+    if (!a || !b) continue;
+    if (!m.has(a)) m.set(a, new Map());
+    const inner = m.get(a)!;
+    inner.set(b, (inner.get(b) ?? 0) + 1);
+  }
+  return m;
+}
+
 export function ceAggregate(rows: CeRow[]) {
-  const total = rows.length;
-  const closed = rows.filter((r) => isClosed(r.kondisi_akhir)).length;
-  const open = rows.filter((r) => isOpen(r.kondisi_akhir)).length;
+  // Hanya baris dengan status OPEN atau CLOSE yang dianggap sebagai "Temuan" (Anomali)
+  const findingRows = rows.filter(r => 
+    ["OPEN", "CLOSE"].includes((r.status_terkini || "").toUpperCase())
+  );
+
+  const total = findingRows.length;
+  const closed = findingRows.filter((r) => isClosed(r.kondisi_akhir)).length;
+  const open = findingRows.filter((r) => isOpen(r.kondisi_akhir)).length;
   const progress = total > 0 ? Math.round((closed / total) * 10000) / 100 : 0;
 
-  const kaSummary = countBy(rows, (r) => r.kondisi_akhir);
-  const kondisiTerkini = countBy(rows, (r) => r.kondisi_terkini);
-  const byUpt = countBy2(rows, (r) => r.upt, (r) => r.kondisi_akhir);
-  const bySubBidang = countBy2(rows, (r) => r.sub_bidang, (r) => r.kondisi_akhir);
-  const byLevel = countBy2(rows, (r) => r.level_anomali, (r) => r.kondisi_akhir);
-  const uraianTop = [...countBy(rows, (r) => r.uraian).entries()]
+  const condMap: Record<string, string> = {
+    "1-": "Very Good", "2-": "Good", "3-": "Fair", "4-": "Poor", "5-": "Critical"
+  };
+  const norm = (v: string) => {
+    const key = Object.keys(condMap).find(k => (v || "").includes(k));
+    return key ? condMap[key] : v;
+  };
+
+  const kaSummary = countBy(findingRows, (r) => norm(r.kondisi_akhir));
+  // TARGET AWAL menggunakan seluruh populasi (termasuk yang status '-')
+  const kondisiAwal = countBy(rows, (r) => norm(r.kondisi_awal));
+  const kondisiTerkini = countBy(findingRows, (r) => norm(r.kondisi_terkini));
+  
+  const byUpt = countByCond(findingRows, (r) => r.upt, (r) => r.kondisi_akhir);
+  const bySubBidang = countByCond(findingRows, (r) => r.sub_bidang, (r) => r.kondisi_akhir);
+  const byLevel = countByCond(findingRows, (r) => r.level_anomali, (r) => r.kondisi_akhir);
+  
+  const uraianTop = [...countBy(findingRows, (r) => r.uraian).entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15);
-  const byLevelUraian = countBy2(rows, (r) => r.level_anomali, (r) => r.uraian);
+  const byLevelUraian = countBy2(findingRows, (r) => r.level_anomali, (r) => r.uraian);
 
-  // Tabel ringkasan level anomali: breakdown VG/G/F/P/C per level
+  // Tabel ringkasan level anomali: breakdown VG/G/F/P/C per level (fokus TEMUAN)
   const levelSummary = [...byLevel.entries()]
     .map(([level, conds]) => {
-      const pick = (p: string) =>
-        [...conds.entries()].filter(([k]) => k.includes(p)).reduce((s, [, c]) => s + c, 0);
-      const vg = pick("1-"), g = pick("2-"), f = pick("3-"), p = pick("4-"), c = pick("5-");
+      const vg = conds.get("Very Good") ?? 0;
+      const g = conds.get("Good") ?? 0;
+      const f = conds.get("Fair") ?? 0;
+      const p = conds.get("Poor") ?? 0;
+      const c = conds.get("Critical") ?? 0;
       return { level, vg, g, f, p, c, total: vg + g + f + p + c };
     })
     .sort((a, b) => b.total - a.total);
 
   // Rekap GIS: aggregate stats for rows where GI is GIS
-  const gisRows = rows.filter((r) => isGis(r.gardu_induk));
+  const gisRows = findingRows.filter((r) => isGis(r.gardu_induk));
   const gisTotal = gisRows.length;
   const gisClosed = gisRows.filter((r) => isClosed(r.kondisi_akhir)).length;
   const gisOpen = gisRows.filter((r) => isOpen(r.kondisi_akhir)).length;
@@ -139,19 +180,21 @@ export function ceAggregate(rows: CeRow[]) {
     progress: gisTotal > 0 ? Math.round((gisClosed / gisTotal) * 10000) / 100 : 0,
   };
 
-  // Tabel ringkasan UPT: pecah per kondisi (VG/G/F/P/C) + total
+  // Tabel ringkasan UPT: pecah per kondisi (VG/G/F/P/C) + total (fokus TEMUAN)
   const uptSummary = [...byUpt.entries()]
     .map(([name, conds]) => {
-      const pick = (p: string) =>
-        [...conds.entries()].filter(([k]) => k.includes(p)).reduce((s, [, c]) => s + c, 0);
-      const vg = pick("1-"), g = pick("2-"), f = pick("3-"), p = pick("4-"), c = pick("5-");
+      const vg = conds.get("Very Good") ?? 0;
+      const g = conds.get("Good") ?? 0;
+      const f = conds.get("Fair") ?? 0;
+      const p = conds.get("Poor") ?? 0;
+      const c = conds.get("Critical") ?? 0;
       return { name, vg, g, f, p, c, total: vg + g + f + p + c };
     })
     .sort((a, b) => b.total - a.total);
 
   return {
     stats: { total, closed, open, progress },
-    kaSummary, kondisiTerkini, byUpt, bySubBidang, byLevel,
+    kaSummary, kondisiAwal, kondisiTerkini, byUpt, bySubBidang, byLevel,
     uraianTop, byLevelUraian, levelSummary, uptSummary, gisSummary,
   };
 }

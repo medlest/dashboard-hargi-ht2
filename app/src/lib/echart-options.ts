@@ -50,7 +50,7 @@ export function pieOption(t: ChartTheme, slices: Slice[]): EChartsOption {
         label: {
           show: true,
           position: "outside",
-          // SEMUA irisan tampil lengkap: angka + persen (sekecil apapun)
+          // SEMUA irisan tampil lengkap: angka + persen
           formatter: (p: DefaultLabelFormatterCallbackParams) =>
             `${p.value} (${(p.percent ?? 0).toFixed(1)}%)`,
           color: t.tickStrong,
