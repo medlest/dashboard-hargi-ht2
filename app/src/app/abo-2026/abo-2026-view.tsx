@@ -6,17 +6,24 @@ import {
   aboAggregate, aboAvailableFilters, aboFilterRows,
   type AboFilters, type AboRow,
 } from "@/lib/aggregate";
+import { conditionColor, sortConditions } from "@/lib/colors";
 import { MultiSelect } from "@/components/multi-select";
 import { ChartCard } from "@/components/chart-card";
 import { EChart, useChartTheme } from "@/components/echart";
-import { pieOption, rankedBarOption, stackedBarOption } from "@/lib/echart-options";
+import { pieOption, rankedBarOption, simpleBarOption, stackedBarOption } from "@/lib/echart-options";
 import { BigStat, Caption, pctColor } from "@/components/hero-primitives";
 import { ZoomIn, ZoomOut, Maximize, Presentation } from "lucide-react";
 import { Deck, DeckCover, DeckChartSlide, DeckContentSlide } from "@/components/slide-deck";
 
 const EMPTY: AboFilters = { upt: [], status: [], jenis_anomali: [], status_fix: [] };
 
-export function Abo2026View({ rows }: { rows: AboRow[] }) {
+export function Abo2026View({ 
+  rows, 
+  ahiCritical = [] 
+}: { 
+  rows: AboRow[];
+  ahiCritical?: { upt: string; kondisi_akhir: string }[];
+}) {
   const t = useChartTheme();
   const [sel, setSel] = useState<AboFilters>(EMPTY);
   const [zoom, setZoom] = useState(1);
@@ -60,6 +67,27 @@ export function Abo2026View({ rows }: { rows: AboRow[] }) {
       return { name, close, open, total, pct };
     }).sort((a, b) => b.total - a.total);
   }, [agg.byUpt]);
+
+  // AHI Critical Chart Data
+  const ahiOpt = useMemo(() => {
+    const filteredAhi = ahiCritical.filter(
+      (r) => sel.upt.length === 0 || sel.upt.includes(r.upt)
+    );
+    const counts = new Map<string, number>();
+    filteredAhi.forEach((r) => {
+      counts.set(r.kondisi_akhir, (counts.get(r.kondisi_akhir) ?? 0) + 1);
+    });
+
+    const labels = sortConditions([...counts.keys()]);
+    return simpleBarOption(
+      t,
+      labels.map((l) => ({
+        name: l,
+        value: counts.get(l) ?? 0,
+        color: conditionColor(l),
+      }))
+    );
+  }, [ahiCritical, sel.upt, t]);
 
   // Charts
   const statusOpt = pieOption(t, [
@@ -230,11 +258,14 @@ export function Abo2026View({ rows }: { rows: AboRow[] }) {
             <ChartCard title="Distribusi Jenis Anomali ABO" className="rise rise-5 flex-1 min-h-80">
               <EChart key="anomali-chart" option={anomaliOpt} />
             </ChartCard>
+            <ChartCard title="Target AHI (Khusus Aset Critical)" className="rise rise-6 h-80">
+              <EChart key="ahi-critical-chart" option={ahiOpt} />
+            </ChartCard>
           </div>
         </div>
 
         {/* Table */}
-        <section className="card rise rise-5 p-4">
+        <section className="card rise rise-7 p-4">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="card-title text-sm">Rincian Data ABO 2026</h3>
             <span className="num text-[11px] bg-surface-2 px-2 py-0.5 rounded-full text-ink-2">
@@ -363,6 +394,9 @@ export function Abo2026View({ rows }: { rows: AboRow[] }) {
                       </ChartCard>
                       <ChartCard title="Distribusi Jenis Anomali ABO" className="flex-1 min-h-80">
                         <EChart key="dk-anomali-chart" option={anomaliOpt} />
+                      </ChartCard>
+                      <ChartCard title="Target AHI (Khusus Aset Critical)" className="h-80">
+                        <EChart key="dk-ahi-critical-chart" option={ahiOpt} />
                       </ChartCard>
                     </div>
                   </div>

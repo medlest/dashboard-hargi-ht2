@@ -6,7 +6,7 @@ import { tooltipPreset, type ChartTheme } from "@/components/echart";
 export type Slice = { name: string; value: number; color: string };
 export type StackSeries = { name: string; data: number[]; color: string };
 
-const FONT_LABEL = 10;
+const FONT_LABEL = 12;
 
 // Tooltip axis yang JUJUR: seri bernilai 0 tidak ditampilkan.
 // (Default ECharts nampilin semua seri termasuk 0 → menyesatkan utk data sparse.)
@@ -32,7 +32,7 @@ export function pieOption(t: ChartTheme, slices: Slice[]): EChartsOption {
       type: "scroll",
       itemWidth: 10,
       itemHeight: 10,
-      textStyle: { color: t.tick, fontSize: 10 },
+      textStyle: { color: t.tick, fontSize: 11 },
       pageTextStyle: { color: t.tick },
     },
     series: [
@@ -55,8 +55,8 @@ export function pieOption(t: ChartTheme, slices: Slice[]): EChartsOption {
             `${p.value} (${(p.percent ?? 0).toFixed(1)}%)`,
           color: t.tickStrong,
           fontWeight: "bold",
-          fontSize: 10,
-          lineHeight: 13,
+          fontSize: 11,
+          lineHeight: 14,
         },
         // geser otomatis label yang saling timpa (vertikal)
         labelLayout: { moveOverlap: "shiftY" },
@@ -103,7 +103,7 @@ export function stackedBarOption(
       type: "scroll",
       itemWidth: 10,
       itemHeight: 10,
-      textStyle: { color: t.tick, fontSize: 10 },
+      textStyle: { color: t.tick, fontSize: 11 },
       pageTextStyle: { color: t.tick },
     },
     grid: { left: 8, right: totals && horizontal ? 44 : 16, top: legendTop ? 34 : 12, bottom: legendTop ? 8 : 34, containLabel: true },
@@ -120,7 +120,7 @@ export function stackedBarOption(
         label: {
           show: true,
           color: "#fff",
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: "bold" as const,
           formatter: (p: { value: unknown }) =>
             Number(p.value) >= minLabel ? String(p.value) : "",
@@ -139,7 +139,7 @@ export function stackedBarOption(
               position: (horizontal ? "right" : "top") as "right" | "top",
               color: t.tickStrong,
               fontWeight: "bold" as const,
-              fontSize: 11,
+              fontSize: 12,
               formatter: (p: { dataIndex: number }) => String(totals[p.dataIndex]),
             },
           }]
@@ -175,7 +175,7 @@ export function hbarOption(t: ChartTheme, categories: string[], data: number[], 
         position: "right",
         color: t.tickStrong,
         fontWeight: "bold",
-        fontSize: 10,
+        fontSize: 11,
       },
     }],
   };
@@ -196,7 +196,7 @@ export function lineOption(t: ChartTheme, xLabels: string[], series: LineSeries[
       type: "scroll",
       itemWidth: 12,
       itemHeight: 8,
-      textStyle: { color: t.tick, fontSize: 10 },
+      textStyle: { color: t.tick, fontSize: 11 },
       pageTextStyle: { color: t.tick },
     },
     grid: { left: 8, right: 24, top: 36, bottom: 8, containLabel: true },
@@ -225,7 +225,7 @@ export function lineOption(t: ChartTheme, xLabels: string[], series: LineSeries[
         show: s.bold || series.length <= 3,
         position: "top" as const,
         color: s.color,
-        fontSize: s.bold ? 11 : 9,
+        fontSize: s.bold ? 12 : 10,
         fontWeight: "bold" as const,
         formatter: (p: { value: unknown }) => (Number(p.value) > 0 ? String(p.value) : ""),
         ...(s.bold
@@ -256,7 +256,7 @@ export function paretoOption(
     xAxis: {
       type: "category",
       data: sorted.map((s) => s.name),
-      axisLabel: { color: t.tick, fontSize: 9, interval: 0, rotate: sorted.length > 7 ? 28 : 0 },
+      axisLabel: { color: t.tick, fontSize: 10, interval: 0, rotate: sorted.length > 7 ? 28 : 0 },
       axisLine: { lineStyle: { color: t.grid } },
       axisTick: { show: false },
     },
@@ -285,7 +285,7 @@ export function paretoOption(
           position: "top",
           color: t.tickStrong,
           fontWeight: "bold",
-          fontSize: 10,
+          fontSize: 11,
         },
       },
       {
@@ -301,7 +301,7 @@ export function paretoOption(
           show: true,
           position: "top",
           color: "#f59e0b",
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: "bold",
           formatter: (p: DefaultLabelFormatterCallbackParams) => `${p.value}%`,
         },
@@ -331,7 +331,7 @@ export function rankedBarOption(
       type: "category",
       data: sorted.map((s) => s.name),
       inverse: true,
-      axisLabel: { color: t.tick, fontSize: 10 },
+      axisLabel: { color: t.tick, fontSize: 11 },
       axisLine: { lineStyle: { color: t.grid } },
       axisTick: { show: false },
     },
@@ -347,7 +347,7 @@ export function rankedBarOption(
         position: "right",
         color: t.tickStrong,
         fontWeight: "bold",
-        fontSize: 10,
+        fontSize: 11,
         formatter: (p: DefaultLabelFormatterCallbackParams) =>
           `${p.value} · ${((Number(p.value) / total) * 100).toFixed(1)}%`,
       },
@@ -384,7 +384,7 @@ export function groupedBarOption(
       type: "scroll",
       itemWidth: 10,
       itemHeight: 10,
-      textStyle: { color: t.tick, fontSize: 10 },
+      textStyle: { color: t.tick, fontSize: 11 },
       pageTextStyle: { color: t.tick },
     },
     grid: { left: 8, right: horizontal ? 28 : 16, top: 34, bottom: 8, containLabel: true },
@@ -402,7 +402,7 @@ export function groupedBarOption(
         position: (horizontal ? "right" : "top") as "right" | "top",
         color: t.tickStrong,
         fontWeight: "bold" as const,
-        fontSize: 9,
+        fontSize: 10,
         formatter: (p: DefaultLabelFormatterCallbackParams) =>
           Number(p.value) > 0 ? String(p.value) : "",
       },
@@ -448,7 +448,7 @@ export function simpleBarOption(
         position: horizontal ? "right" : "top",
         color: t.tickStrong,
         fontWeight: "bold",
-        fontSize: 10,
+        fontSize: 11,
         formatter: (p: DefaultLabelFormatterCallbackParams) =>
           `${p.value} (${((Number(p.value) / total) * 100).toFixed(1)}%)`,
       },

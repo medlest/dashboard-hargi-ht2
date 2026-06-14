@@ -10,15 +10,28 @@ export const CONDITION_COLORS: Record<string, string> = {
 };
 
 export function conditionColor(label: string): string {
-  const key = Object.keys(CONDITION_COLORS).find((k) => String(label).includes(k)) ?? "N/A";
+  const l = String(label).toLowerCase();
+  const key = Object.keys(CONDITION_COLORS).find((k) => {
+    const lowK = k.toLowerCase();
+    return l.includes(lowK) || lowK.includes(l);
+  }) ?? "N/A";
   return CONDITION_COLORS[key];
 }
 
 // Sort kondisi 5-Critical dulu → 1-Very Good (konsisten dengan baseline)
 export function sortConditions(values: string[]): string[] {
+  const order: Record<string, number> = {
+    "critical": 5, "poor": 4, "fair": 3, "good": 2, "very good": 1
+  };
   return [...new Set(values)].sort((a, b) => {
-    const av = parseInt(String(a).split("-")[0]) || 0;
-    const bv = parseInt(String(b).split("-")[0]) || 0;
+    const la = String(a).toLowerCase();
+    const lb = String(b).toLowerCase();
+    
+    const av = order[Object.keys(order).find(k => la.includes(k)) ?? ""] 
+               || parseInt(la.split("-")[0]) || 0;
+    const bv = order[Object.keys(order).find(k => lb.includes(k)) ?? ""] 
+               || parseInt(lb.split("-")[0]) || 0;
+               
     return bv - av;
   });
 }

@@ -128,10 +128,10 @@ export default async function OverviewPage({
          order by to_date(trim(gt.tgl_keluar), 'DD-Mon-YY') desc
          limit 1) g) as last_ggn,
       (select to_jsonb(m) from (
-         select sheet_name_ce, sheet_name_pareto, sheet_name_abo,
+         select sheet_name_ce, sheet_name_pareto, NULL as sheet_name_abo,
                 to_char(sheet_modified_ce at time zone 'Asia/Jakarta', 'DD Mon YYYY') as mod_ce,
                 to_char(sheet_modified_pareto at time zone 'Asia/Jakarta', 'DD Mon YYYY') as mod_pareto,
-                to_char(sheet_modified_abo at time zone 'Asia/Jakarta', 'DD Mon YYYY') as mod_abo,
+                NULL as mod_abo,
                 to_char(finished_at at time zone 'Asia/Jakarta', 'DD Mon YYYY · HH24:MI') as synced_at
          from hargi_ht2.refresh_log
          where status = 'success' and finished_at is not null

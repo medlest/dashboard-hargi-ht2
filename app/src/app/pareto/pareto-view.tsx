@@ -7,7 +7,9 @@ import {
   type GgnFilters, type GgnRow,
 } from "@/lib/aggregate";
 import { buildCategoryColors } from "@/lib/colors";
-import { pieOption, stackedBarOption, lineOption, type LineSeries } from "@/lib/echart-options";
+import {
+  pieOption, stackedBarOption, lineOption, groupedBarOption, type LineSeries
+} from "@/lib/echart-options";
 import { MultiSelect } from "@/components/multi-select";
 import { ChartCard } from "@/components/chart-card";
 import { EChart, useChartTheme } from "@/components/echart";
@@ -52,6 +54,18 @@ export function ParetoView({ rows }: { rows: GgnRow[] }) {
       color: colorOf(cat),
     })),
     { horizontal: true, totals: unitTotals, legendTop: false, showAllLabels: true },
+  );
+
+  // New grouped chart: Breakdown Kategori per Unit
+  const groupedUnitOpt = groupedBarOption(
+    t,
+    unitLabels.map((u) => u.replace(/^UPT /, "")),
+    kategoris.map((cat) => ({
+      name: cat,
+      data: unitLabels.map((u) => agg.byUnitKategori.get(u)?.get(cat) ?? 0),
+      color: colorOf(cat),
+    })),
+    { horizontal: false }
   );
 
   const years = [...agg.byTahunBulan.keys()].sort();
@@ -105,17 +119,23 @@ export function ParetoView({ rows }: { rows: GgnRow[] }) {
         </ChartCard>
       </div>
 
+      <div className="grid grid-cols-1 gap-3">
+        <ChartCard title="Rincian Kategori per Unit (Grouped)" className="rise rise-4 h-96">
+          <EChart key={`gu-${t.key}`} option={groupedUnitOpt} />
+        </ChartCard>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <ChartCard title="Trend Gangguan Bulanan" className="rise rise-4 h-96">
+        <ChartCard title="Trend Gangguan Bulanan" className="rise rise-5 h-96">
           <EChart key={`tr-${t.key}`} option={trendOpt} />
         </ChartCard>
-        <ChartCard title="Trend Gangguan Year-on-Year" className="rise rise-5 h-96">
+        <ChartCard title="Trend Gangguan Year-on-Year" className="rise rise-6 h-96">
           <EChart key={`yoy-${t.key}`} option={yoyOpt} />
         </ChartCard>
       </div>
 
       {/* Tabel rincian */}
-      <section className="card rise rise-6 p-4">
+      <section className="card rise rise-7 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="card-title">Rincian Data Gangguan</h3>
           <span className="num rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">

@@ -102,7 +102,7 @@ export function OverviewView({
           selected={selectedUnits}
           onChange={onUnitChange}
         />
-        <div className="ml-auto text-[11px] text-ink-3 px-2 flex items-center gap-2">
+        <div className="ml-auto text-xs text-ink-3 px-2 flex items-center gap-2">
            <span className="hidden sm:inline">Data tersinkronisasi:</span>
            <span className="font-bold bg-surface-2 px-2 py-1 rounded-full">{meta?.synced_at ?? "Belum ada"}</span>
         </div>
@@ -117,31 +117,31 @@ export function OverviewView({
              <div className="flex items-center gap-2 font-bold text-amber">
                <TrendingUp className="w-4 h-4" /> Trend Gangguan Trafo
              </div>
-             <Link href="/pareto" className="text-[11px] font-semibold text-ink-3 hover:text-ink flex items-center transition-colors">
+             <Link href="/pareto" className="text-xs font-semibold text-ink-3 hover:text-ink flex items-center transition-colors">
                Detail <ChevronRight className="w-3 h-3 ml-0.5 transition-transform group-hover:translate-x-0.5" />
              </Link>
           </div>
           <div className="p-5 flex-1 flex flex-col gap-6">
              <div className="grid grid-cols-2 gap-4">
                <div>
-                 <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Total Gangguan</div>
-                 <div className="text-3xl num font-bold text-ink tracking-tight">{ggn.total}</div>
-                 <div className="text-[10px] text-ink-3 mt-1">{yearRange}</div>
+                 <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Total Gangguan</div>
+                 <div className="text-4xl num font-bold text-ink tracking-tight">{ggn.total}</div>
+                 <div className="text-xs text-ink-3 mt-1">{yearRange}</div>
                </div>
                <div>
-                 <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Tahun {curYear}</div>
-                 <div className="text-3xl num font-bold text-amber tracking-tight">{ggnYearNow}</div>
-                 <div className="text-[10px] text-ink-3 mt-1">Bulan {monthLabel}: <b className="text-ink-2">{ggnMonthNow}</b></div>
+                 <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Tahun {curYear}</div>
+                 <div className="text-4xl num font-bold text-amber tracking-tight">{ggnYearNow}</div>
+                 <div className="text-xs text-ink-3 mt-1">Bulan {monthLabel}: <b className="text-ink-2">{ggnMonthNow}</b></div>
                </div>
              </div>
              {lastGgn && (
                 <div className="mt-auto pt-4 border-t border-edge/30">
-                  <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1.5 flex items-center gap-2">
+                  <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1.5 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                     Gangguan Terakhir ({lastGgn.tgl_keluar})
                   </div>
-                  <div className="text-sm font-bold text-ink-2">{lastGgn.gardu.replace(/^GIS?T?\s*\d+\s*KV\s*/i, "")}</div>
-                  <div className="text-xs text-ink-3 truncate">{lastGgn.nama_bay}</div>
+                  <div className="text-base font-bold text-ink-2">{lastGgn.gardu.replace(/^GIS?T?\s*\d+\s*KV\s*/i, "")}</div>
+                  <div className="text-sm text-ink-3 truncate">{lastGgn.nama_bay}</div>
                 </div>
              )}
           </div>
@@ -153,27 +153,27 @@ export function OverviewView({
              <div className="flex items-center gap-2 font-bold text-blue-400">
                <ClipboardList className="w-4 h-4" /> CE Next Level 2026
              </div>
-             <Link href="/ce-abo" className="text-[11px] font-semibold text-ink-3 hover:text-ink flex items-center transition-colors">
+             <Link href="/ce-abo" className="text-xs font-semibold text-ink-3 hover:text-ink flex items-center transition-colors">
                Detail <ChevronRight className="w-3 h-3 ml-0.5 transition-transform group-hover:translate-x-0.5" />
              </Link>
           </div>
           <div className="p-5 flex-1 flex flex-col gap-6">
              <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Total Temuan</div>
-                  <div className="text-3xl num font-bold text-ink tracking-tight">{ce.total}</div>
+                  <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Total Temuan</div>
+                  <div className="text-4xl num font-bold text-ink tracking-tight">{ce.total}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Progres Penyelesaian</div>
-                  <div className="text-2xl num font-bold tracking-tight" style={{ color: pctColor(ceProgress) }}>{ceProgress.toFixed(1)}%</div>
+                  <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Progres</div>
+                  <div className="text-3xl num font-bold tracking-tight" style={{ color: pctColor(ceProgress) }}>{ceProgress.toFixed(1)}%</div>
                 </div>
              </div>
              <div className="mt-auto">
-               <div className="flex justify-between text-xs font-medium mb-2">
-                  <span className="text-emerald-500">{ce.closed} <span className="opacity-70 font-normal">Close</span></span>
-                  <span className="text-red-400">{ce.open} <span className="opacity-70 font-normal">Open</span></span>
+               <div className="flex justify-between text-sm font-medium mb-2">
+                  <span className="text-emerald-500">{ce.closed} <span className="opacity-70 font-normal text-xs">Close</span></span>
+                  <span className="text-red-400">{ce.open} <span className="opacity-70 font-normal text-xs">Open</span></span>
                </div>
-               <div className="h-2 bg-surface-2 rounded-full overflow-hidden flex">
+               <div className="h-3 bg-surface-2 rounded-full overflow-hidden flex">
                   <div className="h-full bg-emerald-500" style={{ width: `${ceProgress}%` }} />
                   {ce.total > 0 && <div className="h-full bg-red-400" style={{ width: `${100 - ceProgress}%` }} />}
                </div>
@@ -187,27 +187,27 @@ export function OverviewView({
              <div className="flex items-center gap-2 font-bold text-emerald-400">
                <Zap className="w-4 h-4" /> ABO 2026
              </div>
-             <Link href="/abo-2026" className="text-[11px] font-semibold text-ink-3 hover:text-ink flex items-center transition-colors">
+             <Link href="/abo-2026" className="text-xs font-semibold text-ink-3 hover:text-ink flex items-center transition-colors">
                Detail <ChevronRight className="w-3 h-3 ml-0.5 transition-transform group-hover:translate-x-0.5" />
              </Link>
           </div>
           <div className="p-5 flex-1 flex flex-col gap-6">
              <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Total Rencana</div>
-                  <div className="text-3xl num font-bold text-ink tracking-tight">{abo.total}</div>
+                  <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Total Rencana</div>
+                  <div className="text-4xl num font-bold text-ink tracking-tight">{abo.total}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Progres Akumulatif</div>
-                  <div className="text-2xl num font-bold tracking-tight" style={{ color: pctColor(aboProgress) }}>{aboProgress.toFixed(1)}%</div>
+                  <div className="text-xs uppercase tracking-[0.1em] text-ink-3 font-semibold mb-1">Progres</div>
+                  <div className="text-3xl num font-bold tracking-tight" style={{ color: pctColor(aboProgress) }}>{aboProgress.toFixed(1)}%</div>
                 </div>
              </div>
              <div className="mt-auto">
-               <div className="flex justify-between text-xs font-medium mb-2">
-                  <span className="text-emerald-500">{abo.closed} <span className="opacity-70 font-normal">Selesai</span></span>
-                  <span className="text-red-400">{abo.open} <span className="opacity-70 font-normal">Sisa</span></span>
+               <div className="flex justify-between text-sm font-medium mb-2">
+                  <span className="text-emerald-500">{abo.closed} <span className="opacity-70 font-normal text-xs">Selesai</span></span>
+                  <span className="text-red-400">{abo.open} <span className="opacity-70 font-normal text-xs">Sisa</span></span>
                </div>
-               <div className="h-2 bg-surface-2 rounded-full overflow-hidden flex">
+               <div className="h-3 bg-surface-2 rounded-full overflow-hidden flex">
                   <div className="h-full bg-emerald-500" style={{ width: `${aboProgress}%` }} />
                   {abo.total > 0 && <div className="h-full bg-red-400" style={{ width: `${100 - aboProgress}%` }} />}
                </div>
@@ -220,13 +220,13 @@ export function OverviewView({
       {/* Hero Map Section */}
       <div className="card rise rise-5 overflow-hidden flex flex-col shadow-sm border border-edge">
         <div className="p-4 border-b border-edge/50 bg-surface-solid flex justify-between items-center">
-          <div className="flex items-center gap-2 font-bold text-[13px] text-ink">
+          <div className="flex items-center gap-2 font-bold text-sm text-ink">
             <MapIcon className="w-4 h-4 text-accent" /> Peta Sebaran Aset Gardu Induk
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium text-ink-2">
-            <span><b className="text-ink">{gi.total}</b> GI</span>
+          <div className="flex items-center gap-4 text-sm font-medium text-ink-2">
+            <span><b className="text-ink text-base">{gi.total}</b> GI</span>
             <span className="w-1 h-1 rounded-full bg-edge" />
-            <span><b className="text-ink">{trafo.total}</b> Trafo</span>
+            <span><b className="text-ink text-base">{trafo.total}</b> Trafo</span>
           </div>
         </div>
         <div className="relative h-[55vh] min-h-[400px] w-full bg-bg">

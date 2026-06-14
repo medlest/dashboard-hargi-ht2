@@ -17,15 +17,24 @@ export default async function Abo2026Page() {
          from hargi_ht2.abo_2026
          order by id
       ) x) as rows,
+      (select coalesce(jsonb_agg(y), '[]'::jsonb) from (
+         select upt, status as kondisi_akhir
+         from hargi_ht2.abo_2026
+         where jenis_anomali ilike '%AHI%' and jenis_anomali ilike '%aset kritikal%'
+      ) y) as ahi_critical,
       (select to_jsonb(m) from (
-         select sheet_name_abo as name,
-                to_char(sheet_modified_abo at time zone 'Asia/Jakarta', 'DD Mon YYYY') as modified
+         select NULL as name,
+                NULL as modified
          from hargi_ht2.refresh_log
          where status = 'success' and finished_at is not null
          order by id desc limit 1) m) as meta
-  `) as unknown as [{ rows: AboRow[]; meta: { name: string; modified: string } | null }];
+  `) as unknown as [{ 
+    rows: AboRow[]; 
+    ahi_critical: { upt: string; kondisi_akhir: string }[];
+    meta: { name: string; modified: string } | null 
+  }];
 
-  const { rows, meta } = row;
+  const { rows, ahi_critical, meta } = row;
 
   return (
     <div className="space-y-6">
@@ -36,7 +45,7 @@ export default async function Abo2026Page() {
         sheetName={meta?.name || "ABO 2026"}
         sheetModified={meta?.modified}
       />
-      <Abo2026View rows={rows} />
+      <Abo2026View rows={rows} ahiCritical={ahi_critical} />
     </div>
   );
 }
