@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { CE_ABO_SHEET, PARETO_SHEET, sheetEditUrl } from "@/lib/sheets";
+// Test deploy trigger: gemini-cli-diagus-stable
 import { PageHeader } from "@/components/page-header";
 import { OverviewView } from "./overview-view";
 import type {
