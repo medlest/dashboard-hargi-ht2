@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Zap, TrendingUp, ClipboardList, Map, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
+import { Zap, TrendingUp, ClipboardList, Map, LayoutDashboard, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const NAV = [
   { href: "/ce-abo", label: "CE Next Level 2026", icon: ClipboardList },
   { href: "/abo-2026", label: "ABO 2026", icon: Zap },
   { href: "/asset-maps", label: "Asset Maps", icon: Map },
+  { href: "/ahi-mtu", label: "Asset Healthy Index MTU", icon: Activity },
 ];
 
 export function Sidebar() {

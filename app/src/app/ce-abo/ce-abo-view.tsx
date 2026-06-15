@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Presentation } from "lucide-react";
 import {
   ceAggregate, ceAvailableFilters, ceFilterRows,
   type CeFilters, type CeRow,
@@ -11,12 +12,14 @@ import { MultiSelect } from "@/components/multi-select";
 import { ChartCard } from "@/components/chart-card";
 import { HeroCE } from "./hero-ce";
 import { EChart, useChartTheme } from "@/components/echart";
+import { Deck, DeckCover, DeckChartSlide, DeckContentSlide, DeckB, deckPct } from "@/components/slide-deck";
 
 const EMPTY: CeFilters = { upt: [], sub_bidang: [], level_anomali: [], kondisi_akhir: [] };
 
 export function CeAboView({ rows }: { rows: CeRow[] }) {
   const t = useChartTheme();
   const [sel, setSel] = useState<CeFilters>(EMPTY);
+  const [showDeck, setShowDeck] = useState(false);
 
   // Pisahkan temuan aktif dari populasi penuh
   const findings = useMemo(() => 
@@ -32,24 +35,19 @@ export function CeAboView({ rows }: { rows: CeRow[] }) {
 
   // Hero: agregat dari baris temuan yang lolos filter SELAIN level
   const heroAgg = useMemo(
-    () => ceAggregate(ceFilterRows(findings, { ...sel, level_anomali: [], is_gis: undefined })),
+    () => ceAggregate(ceFilterRows(findings, { ...sel, level_anomali: [] })),
     [findings, sel],
   );
-  const activeLevel = sel.is_gis ? "GIS" : sel.level_anomali.length === 1 ? sel.level_anomali[0] : null;
+  const activeLevel = sel.level_anomali.length === 1 ? sel.level_anomali[0] : null;
   
   const toggleLevel = (lvl: string) => {
-    if (lvl === "GIS") {
-      setSel(s => ({ ...s, is_gis: s.is_gis ? undefined : true, level_anomali: [] }));
-    } else {
-      setSel(s => ({ ...s, level_anomali: activeLevel === lvl ? [] : [lvl], is_gis: undefined }));
-    }
+    setSel(s => ({ ...s, level_anomali: activeLevel === lvl ? [] : [lvl] }));
   };
 
-  // Khusus chart TARGET AWAL: ambil data dari semua level (Trafo, Switch Yard, MV Apparatus, GIS)
+  // Khusus chart TARGET AWAL: ambil data dari semua level
   // tapi tetap merespon filter UPT/SubBidang/KA yang dipilih.
-  // Gunakan 'rows' (populasi penuh) bukan 'findings'.
   const targetAwalAgg = useMemo(
-    () => ceAggregate(ceFilterRows(rows, { ...sel, level_anomali: [], is_gis: undefined })),
+    () => ceAggregate(ceFilterRows(rows, { ...sel, level_anomali: [] })),
     [rows, sel],
   );
 
@@ -102,14 +100,160 @@ export function CeAboView({ rows }: { rows: CeRow[] }) {
   const uraianLevelLabels = [...agg.byLevelUraian.keys()].sort();
   const uraianAll = [...new Set([...agg.byLevelUraian.values()].flatMap((m) => [...m.keys()]))].sort();
 
+  // ===== Slide Deck Slides =====
+  const slides = useMemo(() => [
+    {
+      key: "summary",
+      label: "Summary",
+      node: (
+        <DeckCover
+          eyebrow="CE Next Level 2026"
+          title={<>Monitoring Temuan <br/> Common Enemy</>}
+          description="Status penanganan anomali HARGI di lingkungan UIT Jawa Bagian Tengah."
+          stats={[
+            { label: "Total Temuan", value: `${agg.stats.total}` },
+            { label: "OPEN", value: `${agg.stats.open}` },
+            { label: "CLOSE", value: `${agg.stats.closed}` },
+            { label: "Progres", value: `${agg.stats.progress}%` },
+          ]}
+        >
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <ChartCard title="Target Awal vs Kondisi Terkini" className="h-[28rem]">
+              <div className="grid h-full grid-cols-2 gap-2">
+                <div className="flex flex-col">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-ink-3 text-center mb-1">Target Awal</div>
+                  <EChart key={`s-ka-${t.key}`} option={pieOption(t, condSlices(targetAwalAgg.kondisiAwal))} />
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-ink-3 text-center mb-1">Kondisi Terkini</div>
+                  <EChart key={`s-kt-${t.key}`} option={pieOption(t, condSlices(agg.kondisiTerkini))} />
+                </div>
+              </div>
+            </ChartCard>
+            
+            <ChartCard title="Distribusi Level Anomali (Target)" className="h-[28rem]">
+              <EChart key={`s-lvl-${t.key}`} option={toGrouped(agg.byLevel)} />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <ChartCard title="Kondisi Akhir per Sub Bidang" className="h-96">
+              <EChart key={`s-sb-${t.key}`} option={simpleBarOption(t, condSlices(agg.kaSummary), { horizontal: true })} />
+            </ChartCard>
+            <ChartCard title="Grafik Kondisi Akhir per UPT" className="h-96">
+              <EChart key={`s-upt-h-${t.key}`} option={toGroupedH(agg.byUpt)} />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <ChartCard title="Top 15 Uraian Anomali" className="h-[32rem]">
+              <EChart key={`s-ur-${t.key}`} option={hbarOption(t, uraianTop.map(([u]) => u), uraianTop.map(([, c]) => c), "#6366f1")} />
+            </ChartCard>
+            <ChartCard title="Fokus Pengerjaan (Uraian OPEN)" className="h-[32rem]">
+              <EChart key={`s-focus-${t.key}`} option={hbarOption(t, agg.focusUraian.map(([u]) => u), agg.focusUraian.map(([, c]) => c), "#ef4444")} />
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <ChartCard title="Progres Penyelesaian per UPT">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-edge text-left text-[11px] uppercase tracking-wider text-ink-3">
+                    <th className="py-3">UPT</th>
+                    <th className="px-3 text-center">Total</th>
+                    <th className="px-3 text-center">Close</th>
+                    <th className="pl-3 text-right">Progres %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...agg.uptSummary].sort((a, b) => b.progress - a.progress).map((u, i) => (
+                    <tr key={i} className="border-b border-edge/40">
+                      <td className="py-3 font-medium">{u.name}</td>
+                      <td className="num px-3 text-center">{u.total}</td>
+                      <td className="num px-3 text-center text-emerald-500">{u.vg + u.g}</td>
+                      <td className="pl-3 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="num w-12 font-bold">{u.progress}%</div>
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-3">
+                            <div className="h-full bg-emerald-500" style={{ width: `${u.progress}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ChartCard>
+
+            <ChartCard title="Rincian Masalah per Level Anomali">
+               <div className="h-[30rem]">
+                <EChart
+                  key={`s-url-${t.key}`}
+                  option={groupedBarOption(
+                    t,
+                    uraianLevelLabels,
+                    uraianAll.map((u, i) => ({
+                      name: u,
+                      data: uraianLevelLabels.map((l) => agg.byLevelUraian.get(l)?.get(u) ?? 0),
+                      color: PALETTE[i % PALETTE.length],
+                    })),
+                  )}
+                />
+               </div>
+            </ChartCard>
+          </div>
+
+          <ChartCard title="Daftar Temuan Prioritas (OPEN)">
+            <div className="max-h-120 overflow-auto scrollbar-thin">
+              <table className="w-full text-[12px]">
+                <thead className="sticky top-0 bg-surface-solid">
+                  <tr className="border-b border-edge text-left text-[10px] uppercase tracking-wider text-ink-3">
+                    <th className="py-2 pr-3">Kode</th>
+                    <th className="px-3">UPT</th>
+                    <th className="px-3">Gardu Induk</th>
+                    <th className="px-3">Uraian</th>
+                    <th className="pl-3 text-right">Kondisi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agg.priorityList.map((r, i) => (
+                    <tr key={i} className="border-b border-edge/40 transition-colors hover:bg-surface-2">
+                      <td className="num py-2 pr-3 font-medium text-accent">{r.kode}</td>
+                      <td className="px-3 whitespace-nowrap">{r.upt.replace(/^UPT /, "")}</td>
+                      <td className="px-3">{r.gardu_induk}</td>
+                      <td className="px-3">{r.uraian}</td>
+                      <td className="pl-3 text-right whitespace-nowrap font-bold" style={{ color: conditionColor(r.kondisi_akhir) }}>
+                        {r.kondisi_akhir}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ChartCard>
+        </DeckCover>
+      ),
+    },
+  ], [agg, t, targetAwalAgg, uraianTop, uraianLevelLabels, uraianAll]);
+
   return (
     <div className="space-y-4">
+      {showDeck && <Deck slides={slides} onExit={() => setShowDeck(false)} />}
+
       {/* Filter bar */}
       <div className="rise rise-1 relative z-40 flex flex-wrap items-center gap-2">
         <MultiSelect label="UPT" options={available.upt} selected={sel.upt} onChange={set("upt")} />
         <MultiSelect label="Sub Bidang" options={available.sub_bidang} selected={sel.sub_bidang} onChange={set("sub_bidang")} />
         <MultiSelect label="Level Anomali" options={available.level_anomali} selected={sel.level_anomali} onChange={set("level_anomali")} />
         <MultiSelect label="Kondisi Akhir" options={available.kondisi_akhir} selected={sel.kondisi_akhir} onChange={set("kondisi_akhir")} />
+        
+        <button
+          onClick={() => setShowDeck(true)}
+          className="ml-2 flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] font-medium text-ink-2 hover:bg-surface-3 hover:text-ink transition-colors"
+        >
+          <Presentation className="h-4 w-4" /> Slide Deck
+        </button>
+
         <div className="ml-auto flex items-center gap-3">
           <span className="num text-xs text-ink-3">{filtered.length} / {rows.length} temuan</span>
         </div>
@@ -119,20 +263,12 @@ export function CeAboView({ rows }: { rows: CeRow[] }) {
       <div className="rise rise-2">
         <HeroCE
           stats={heroAgg.stats}
-          levels={[
-            ...heroAgg.levelSummary.map((l) => ({
-              level: l.level,
-              total: l.total,
-              close: l.vg + l.g,
-              open: l.f + l.p + l.c,
-            })),
-            {
-              level: "GIS",
-              total: heroAgg.gisSummary.total,
-              close: heroAgg.gisSummary.closed,
-              open: heroAgg.gisSummary.open,
-            }
-          ]}
+          levels={heroAgg.levelSummary.map((l) => ({
+            level: l.level,
+            total: l.total,
+            close: l.vg + l.g,
+            open: l.f + l.p + l.c,
+          }))}
           active={activeLevel}
           onToggle={toggleLevel}
         />

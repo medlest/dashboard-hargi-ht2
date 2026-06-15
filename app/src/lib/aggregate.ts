@@ -50,7 +50,7 @@ export function ceAvailableFilters(rows: CeRow[]): CeFilters {
   };
 }
 
-const isGis = (gi: string) => /^(GIS|GISTET)\b/i.test((gi || "").trim());
+const isGis = (r: CeRow) => (r.level_anomali || "").trim().toUpperCase() === "GIS";
 
 export function ceFilterRows(rows: CeRow[], f: CeFilters): CeRow[] {
   return rows.filter(
@@ -59,7 +59,7 @@ export function ceFilterRows(rows: CeRow[], f: CeFilters): CeRow[] {
       (f.sub_bidang.length === 0 || f.sub_bidang.includes(r.sub_bidang)) &&
       (f.level_anomali.length === 0 || f.level_anomali.includes(r.level_anomali)) &&
       (f.kondisi_akhir.length === 0 || f.kondisi_akhir.includes(r.kondisi_akhir)) &&
-      (f.is_gis === undefined || isGis(r.gardu_induk) === f.is_gis),
+      (f.is_gis === undefined || isGis(r) === f.is_gis),
   );
 }
 
@@ -168,8 +168,8 @@ export function ceAggregate(rows: CeRow[]) {
     })
     .sort((a, b) => b.total - a.total);
 
-  // Rekap GIS: aggregate stats for rows where GI is GIS
-  const gisRows = findingRows.filter((r) => isGis(r.gardu_induk));
+  // Rekap GIS: aggregate stats for rows where Level Anomali is GIS
+  const gisRows = findingRows.filter(isGis);
   const gisTotal = gisRows.length;
   const gisClosed = gisRows.filter((r) => isClosed(r.kondisi_akhir)).length;
   const gisOpen = gisRows.filter((r) => isOpen(r.kondisi_akhir)).length;
@@ -188,14 +188,33 @@ export function ceAggregate(rows: CeRow[]) {
       const f = conds.get("Fair") ?? 0;
       const p = conds.get("Poor") ?? 0;
       const c = conds.get("Critical") ?? 0;
-      return { name, vg, g, f, p, c, total: vg + g + f + p + c };
+      const closed = vg + g;
+      const total = vg + g + f + p + c;
+      const progress = total > 0 ? Math.round((closed / total) * 10000) / 100 : 0;
+      return { name, vg, g, f, p, c, total, progress };
     })
     .sort((a, b) => b.total - a.total);
+
+  // Slide specific aggregations
+  const openRows = findingRows.filter(r => isOpen(r.kondisi_akhir));
+  const focusUraian = [...countBy(openRows, (r) => r.uraian).entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15);
+  
+  const priorityList = openRows
+    .filter(r => (r.kondisi_akhir || "").includes("5-") || (r.kondisi_akhir || "").includes("4-"))
+    .sort((a, b) => {
+      if (a.kondisi_akhir.includes("5-") && !b.kondisi_akhir.includes("5-")) return -1;
+      if (!a.kondisi_akhir.includes("5-") && b.kondisi_akhir.includes("5-")) return 1;
+      return 0;
+    })
+    .slice(0, 50);
 
   return {
     stats: { total, closed, open, progress },
     kaSummary, kondisiAwal, kondisiTerkini, byUpt, bySubBidang, byLevel,
     uraianTop, byLevelUraian, levelSummary, uptSummary, gisSummary,
+    focusUraian, priorityList,
   };
 }
 
@@ -243,16 +262,34 @@ export function ggnAggregate(rows: GgnRow[]) {
   const byTahunBulan = new Map<string, Map<string, number>>();
   const byTahunKategori = new Map<string, Map<string, number>>();
   const byTahun = countBy(rows, (r) => r.tahun);
+  
+  // additional for slides
+  const byUnitBulan = new Map<string, Map<string, number>>();
+  const currentYear = new Date().getFullYear().toString();
+  const currentYearRows = rows.filter(r => r.tahun === currentYear);
+
   for (const r of rows) {
     if (!r.tahun || !r.bulan) continue;
     if (!byTahunBulan.has(r.tahun)) byTahunBulan.set(r.tahun, new Map());
     const mb = byTahunBulan.get(r.tahun)!;
     mb.set(r.bulan, (mb.get(r.bulan) ?? 0) + 1);
+
     if (!byTahunKategori.has(r.tahun)) byTahunKategori.set(r.tahun, new Map());
     const mk = byTahunKategori.get(r.tahun)!;
     mk.set(r.kategori, (mk.get(r.kategori) ?? 0) + 1);
+
+    // for trend per unit (current year)
+    if (r.tahun === currentYear && r.unit) {
+      if (!byUnitBulan.has(r.unit)) byUnitBulan.set(r.unit, new Map());
+      const mub = byUnitBulan.get(r.unit)!;
+      mub.set(r.bulan, (mub.get(r.bulan) ?? 0) + 1);
+    }
   }
-  return { byKategori, byUnitKategori, byTahunBulan, byTahunKategori, byTahun, total: rows.length };
+  return { 
+    byKategori, byUnitKategori, byTahunBulan, byTahunKategori, byTahun, 
+    byUnitBulan, currentYear, currentYearRows,
+    total: rows.length 
+  };
 }
 
 export type AboRow = {

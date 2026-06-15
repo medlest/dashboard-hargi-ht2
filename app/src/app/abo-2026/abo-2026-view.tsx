@@ -258,7 +258,7 @@ export function Abo2026View({
             <ChartCard title="Distribusi Jenis Anomali ABO" className="rise rise-5 flex-1 min-h-80">
               <EChart key="anomali-chart" option={anomaliOpt} />
             </ChartCard>
-            <ChartCard title="Jumlah Target awal" className="rise rise-6 h-80">
+            <ChartCard title="Status AHI Pada Aset Critical Subsistem" className="rise rise-6 h-80">
               <EChart key="ahi-critical-chart" option={ahiOpt} />
             </ChartCard>
           </div>
@@ -395,7 +395,7 @@ export function Abo2026View({
                       <ChartCard title="Distribusi Jenis Anomali ABO" className="flex-1 min-h-80">
                         <EChart key="dk-anomali-chart" option={anomaliOpt} />
                       </ChartCard>
-                      <ChartCard title="Jumlah Target awal" className="h-80">
+                      <ChartCard title="Status AHI Pada Aset Critical Subsistem" className="h-80">
                         <EChart key="dk-ahi-critical-chart" option={ahiOpt} />
                       </ChartCard>
                     </div>
