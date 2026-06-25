@@ -8,6 +8,7 @@ import Papa from "npm:papaparse@5.5.3";
 const CE_ABO = { id: "1-eC0GdeMwYDhnGzCSM8viO0HvD6X0NdlMaWOxe2P9ZM", gid: "299154811" };
 const PARETO = { id: "1hf_lpXI6x3hBDfEHX8r8q15w6F3wtlzIABGibdpCMhg", gid: "1882488493" };
 const ABO_2026 = { id: "11HQFitHH8xISZvVxuG0rd0q84Y6tOtCi7jO7wDbUeVs", gid: "1761063736" };
+const ASESMENT_BUSHING = { id: "1HS08VH-CURCJiqjDqhCd1z1VFWbnykA89IrlJaAm9BA", gid: "706438307" };
 
 type Row = Record<string, string>;
 
@@ -61,6 +62,15 @@ async function fetchSheetRows(s: { id: string; gid: string }): Promise<Row[]> {
   return fetchCsv(
     `https://docs.google.com/spreadsheets/d/${s.id}/export?format=csv&gid=${s.gid}&t=${Date.now()}`,
   );
+}
+
+async function fetchSheetRowsAsArray(s: { id: string; gid: string }): Promise<string[][]> {
+  const url = `https://docs.google.com/spreadsheets/d/${s.id}/export?format=csv&gid=${s.gid}&t=${Date.now()}`;
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`Gagal fetch sheet: HTTP ${res.status}`);
+  const text = await res.text();
+  const parsed = Papa.parse<string[]>(text, { header: false, skipEmptyLines: true });
+  return parsed.data;
 }
 
 function findCol(headers: string[], ...terms: string[]): string {
@@ -195,12 +205,68 @@ function mapAbo2026(rows: Row[]) {
     }));
 }
 
+function mapAsesmentBushing(rows: string[][]) {
+  if (rows.length <= 2) return [];
+  // Baris ke-0: merged header group, Baris ke-1: column headers, Baris ke-2+: data
+  const dataRows = rows.slice(2);
+  return dataRows
+    .filter((r) => r.length >= 35 && clean(r[1]) !== "" && clean(r[1]).toUpperCase() !== "NAMAUPT")
+    .map((r) => {
+      const rawObj: Record<string, string> = {};
+      r.forEach((val, idx) => {
+        rawObj[`col_${idx}`] = clean(val);
+      });
+      return {
+        techidentno: clean(r[0]),
+        nama_upt: clean(r[1]),
+        gardu_induk: clean(r[2]),
+        bay_penghantar: clean(r[3]),
+        merk: clean(r[4]),
+        tipe: clean(r[5]),
+        tgl_oprs: clean(r[6]),
+        usia: clean(r[7]),
+        thn_buat: clean(r[8]),
+        jenis_bushing_primer_r: clean(r[9]),
+        merk_primer_r: clean(r[10]),
+        type_primer_r: clean(r[11]),
+        sn_primer_r: clean(r[12]),
+        jenis_bushing_primer_s: clean(r[13]),
+        merk_primer_s: clean(r[14]),
+        type_primer_s: clean(r[15]),
+        sn_primer_s: clean(r[16]),
+        jenis_bushing_primer_t: clean(r[17]),
+        merk_primer_t: clean(r[18]),
+        type_primer_t: clean(r[19]),
+        sn_primer_t: clean(r[20]),
+        jenis_bushing_skunder_r: clean(r[21]),
+        merk_skunder_r: clean(r[22]),
+        type_skunder_r: clean(r[23]),
+        sn_skunder_r: clean(r[24]),
+        jenis_bushing_skunder_s: clean(r[25]),
+        merk_skunder_s: clean(r[26]),
+        type_skunder_s: clean(r[27]),
+        sn_skunder_s: clean(r[28]),
+        jenis_bushing_skunder_t: clean(r[29]),
+        merk_skunder_t: clean(r[30]),
+        type_skunder_t: clean(r[31]),
+        sn_skunder_t: clean(r[32]),
+        overall: clean(r[33]),
+        level_minyak: clean(r[34]),
+        hasil_thermovisi: clean(r[35]),
+        kondisi_fisik: clean(r[36]),
+        keterangan: clean(r[37]),
+        link_evidence: clean(r[38]),
+        raw: rawObj,
+      };
+    });
+}
+
 
 // Metadata sheet (modifiedTime) via Drive API + SA platform-google-api (key di vault).
 // FAIL-SAFE: gagal = null, refresh tetap sukses. Timeout ketat 5 detik.
 // deno-lint-ignore no-explicit-any
 type Meta = { name: string | null; modifiedTime: string | null };
-async function fetchSheetMetadata(sql: any): Promise<{ ce: Meta; pareto: Meta; abo: Meta }> {
+async function fetchSheetMetadata(sql: any): Promise<{ ce: Meta; pareto: Meta; abo: Meta; bushing: Meta }> {
   try {
     const [row] = await sql`
       select decrypted_secret from vault.decrypted_secrets
@@ -246,14 +312,20 @@ async function fetchSheetMetadata(sql: any): Promise<{ ce: Meta; pareto: Meta; a
       const j = await r.json();
       return { name: j.name ?? null, modifiedTime: j.modifiedTime ?? null };
     };
-    const [ce, pareto, abo] = await Promise.all([getMod(CE_ABO.id), getMod(PARETO.id), getMod(ABO_2026.id)]);
-    return { ce, pareto, abo };
+    const [ce, pareto, abo, bushing] = await Promise.all([
+      getMod(CE_ABO.id),
+      getMod(PARETO.id),
+      getMod(ABO_2026.id),
+      getMod(ASESMENT_BUSHING.id)
+    ]);
+    return { ce, pareto, abo, bushing };
   } catch (e) {
     console.error("[sheet-meta]", e instanceof Error ? e.message : e);
     return { 
       ce: { name: null, modifiedTime: null }, 
       pareto: { name: null, modifiedTime: null },
-      abo: { name: null, modifiedTime: null }
+      abo: { name: null, modifiedTime: null },
+      bushing: { name: null, modifiedTime: null }
     };
   }
 }
@@ -274,7 +346,7 @@ Deno.serve(async (req: Request) => {
       insert into hargi_ht2.refresh_log (source) values ('all') returning id`;
     logId = logRow.id;
 
-    const [ceRaw, ggnRaw, aboRaw, meta] = await Promise.all([
+    const [ceRaw, ggnRaw, aboRaw, bushingRaw, meta] = await Promise.all([
       fetchSheetFiltered(CE_ABO, (letterOf) => {
         const sb = letterOf("sub", "bidang");
         const st = letterOf("status", "terkini");
@@ -282,14 +354,17 @@ Deno.serve(async (req: Request) => {
       }),
       fetchSheetRows(PARETO),
       fetchSheetRows(ABO_2026),
+      fetchSheetRowsAsArray(ASESMENT_BUSHING),
       fetchSheetMetadata(sql),
     ]);
     const ce = mapCeAbo(ceRaw);
     const ggn = mapPareto(ggnRaw);
     const abo = mapAbo2026(aboRaw);
+    const bushing = mapAsesmentBushing(bushingRaw);
 
     if (ce.length === 0) throw new Error("Sheet CE ABO menghasilkan 0 baris — refresh dibatalkan.");
     if (ggn.length === 0) throw new Error("Sheet gangguan trafo menghasilkan 0 baris — refresh dibatalkan.");
+    if (bushing.length === 0) throw new Error("Sheet asesment bushing menghasilkan 0 baris — refresh dibatalkan.");
 
     await sql.begin(async (tx) => {
       // advisory lock: 2 refresh barengan antri, gak saling hapus di tengah jalan
@@ -311,23 +386,49 @@ Deno.serve(async (req: Request) => {
           await tx`insert into hargi_ht2.abo_2026 ${tx(abo.slice(i, i + 200))}`;
         }
       }
+
+      await tx`delete from hargi_ht2.asesment_bushing`;
+      if (bushing.length > 0) {
+        for (let i = 0; i < bushing.length; i += 200) {
+          await tx`insert into hargi_ht2.asesment_bushing ${tx(bushing.slice(i, i + 200))}`;
+        }
+      }
     });
 
-    await sql`update hargi_ht2.refresh_log
-      set status='success', row_count=${ce.length + ggn.length + abo.length}, finished_at=now(),
-          sheet_modified_ce=${meta.ce.modifiedTime}, 
-          sheet_modified_pareto=${meta.pareto.modifiedTime},
-          sheet_modified_abo=${meta.abo.modifiedTime},
-          sheet_name_ce=${meta.ce.name}, 
-          sheet_name_pareto=${meta.pareto.name},
-          sheet_name_abo=${meta.abo.name}
-      where id=${logId}`;
+    // Try to update metadata columns in refresh_log. If the columns do not exist
+    // yet (e.g. DDL has not been fully run or permissions differ), fail gracefully
+    // to preserve other data.
+    try {
+      await sql`update hargi_ht2.refresh_log
+        set status='success', row_count=${ce.length + ggn.length + abo.length + bushing.length}, finished_at=now(),
+            sheet_modified_ce=${meta.ce.modifiedTime}, 
+            sheet_modified_pareto=${meta.pareto.modifiedTime},
+            sheet_modified_abo=${meta.abo.modifiedTime},
+            sheet_modified_bushing=${meta.bushing.modifiedTime},
+            sheet_name_ce=${meta.ce.name}, 
+            sheet_name_pareto=${meta.pareto.name},
+            sheet_name_abo=${meta.abo.name},
+            sheet_name_bushing=${meta.bushing.name}
+        where id=${logId}`;
+    } catch (err) {
+      console.warn("Could not write all metadata to refresh_log, trying fallback without new columns:", err instanceof Error ? err.message : err);
+      await sql`update hargi_ht2.refresh_log
+        set status='success', row_count=${ce.length + ggn.length + abo.length + bushing.length}, finished_at=now(),
+            sheet_modified_ce=${meta.ce.modifiedTime}, 
+            sheet_modified_pareto=${meta.pareto.modifiedTime},
+            sheet_modified_abo=${meta.abo.modifiedTime},
+            sheet_name_ce=${meta.ce.name}, 
+            sheet_name_pareto=${meta.pareto.name},
+            sheet_name_abo=${meta.abo.name}
+        where id=${logId}`;
+    }
     
     return new Response(JSON.stringify({ 
       ok: true, 
       ce_abo: ce.length, 
       gangguan_trafo: ggn.length,
-      abo_2026: abo.length 
+      abo_2026: abo.length,
+      asesment_bushing: bushing.length
     }), {
       headers: { "Content-Type": "application/json" },
     });

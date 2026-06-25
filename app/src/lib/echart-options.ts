@@ -362,13 +362,18 @@ export function groupedBarOption(
   t: ChartTheme,
   categories: string[],
   series: StackSeries[],
-  opts: { horizontal?: boolean } = {},
+  opts: { horizontal?: boolean; rotateLabel?: number } = {},
 ): EChartsOption {
-  const { horizontal = false } = opts;
+  const { horizontal = false, rotateLabel } = opts;
   const catAxis = {
     type: "category" as const,
     data: categories,
-    axisLabel: { color: t.tick, fontSize: FONT_LABEL, interval: 0 as const },
+    axisLabel: { 
+      color: t.tick, 
+      fontSize: FONT_LABEL, 
+      interval: 0 as const,
+      rotate: rotateLabel !== undefined ? rotateLabel : (horizontal ? 0 : (categories.length > 5 ? 35 : 0))
+    },
     axisLine: { lineStyle: { color: t.grid } },
     axisTick: { show: false },
   };
