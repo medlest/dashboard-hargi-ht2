@@ -402,15 +402,15 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
               { label: "Health Index", value: `${stats.healthIndex}%` },
             ]}
           >
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 max-w-6xl">
-              <ChartCard title="Sebaran Jenis Bushing per UPT" className="h-[22rem]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl">
+              <ChartCard title="Sebaran Jenis Bushing per UPT" className="min-h-[300px] lg:h-[22rem]">
                 {stats.total === 0 ? (
                   <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                 ) : (
                   <EChart key={`s-upt-pie-${t.key}`} option={uptTotalChartOption} />
                 )}
               </ChartCard>
-              <ChartCard title="Klasifikasi Usia Bushing" className="h-[22rem]">
+              <ChartCard title="Klasifikasi Usia Bushing" className="min-h-[300px] lg:h-[22rem]">
                 {stats.total === 0 ? (
                   <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                 ) : (
@@ -431,16 +431,16 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             description="Rincian masalah yang paling banyak ditemukan beserta sebaran spesifikasi aset."
             stats={[]}
           >
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl">
               <div className="flex flex-col gap-6">
-                <ChartCard title="Temuan per Parameter Uji" className="h-64">
+                <ChartCard title="Temuan per Parameter Uji" className="min-h-[300px] lg:h-72">
                   {stats.total === 0 ? (
                     <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                   ) : (
                     <EChart key={`s-param-${t.key}`} option={parameterChartOption} />
                   )}
                 </ChartCard>
-                <ChartCard title="Grafik Kondisi Bushing per UPT" className="h-64">
+                <ChartCard title="Grafik Kondisi Bushing per UPT" className="min-h-[300px] lg:h-72">
                   {stats.total === 0 ? (
                     <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                   ) : (
@@ -449,14 +449,14 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                 </ChartCard>
               </div>
               <div className="flex flex-col gap-6">
-                <ChartCard title="Jumlah Berdasarkan Jenis Bushing" className="h-64">
+                <ChartCard title="Jumlah Berdasarkan Jenis Bushing" className="min-h-[300px] lg:h-72">
                   {stats.total === 0 ? (
                     <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                   ) : (
                     <EChart key={`s-jenis-${t.key}`} option={jenisChartOption} />
                   )}
                 </ChartCard>
-                <ChartCard title="Jumlah Berdasarkan Merk Bushing" className="h-64">
+                <ChartCard title="Jumlah Berdasarkan Merk Bushing" className="min-h-[300px] lg:h-72">
                   {stats.total === 0 ? (
                     <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                   ) : (
@@ -656,7 +656,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       </div>
 
       {/* 3. TABS BAR CONTROLLER */}
-      <div className="flex border-b border-edge">
+      <div className="flex border-b border-edge overflow-x-auto scrollbar-none whitespace-nowrap">
         <button
           onClick={() => setActiveTab("overview")}
           className={`flex items-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${
@@ -688,10 +688,10 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full"
           >
             {/* Chart 1: Donut Sebaran UPT */}
-            <ChartCard title="Sebaran Jenis Bushing per UPT" className="h-80 col-span-1">
+            <ChartCard title="Sebaran Jenis Bushing per UPT" className="h-[300px] md:h-80 col-span-1">
               {stats.total === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-ink-3 text-xs">
                   Tidak ada data untuk filter saat ini.
@@ -746,7 +746,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             </ChartCard>
 
             {/* Chart 6: Kondisi Bushing per UPT */}
-            <ChartCard title="Grafik Kondisi Bushing per UPT" className="h-80 col-span-1">
+            <ChartCard title="Grafik Kondisi Bushing per UPT" className="h-[300px] md:h-80 col-span-1">
               {stats.total === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-ink-3 text-xs">
                   Tidak ada data untuk filter saat ini.
@@ -763,12 +763,11 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="space-y-4"
+            className="card overflow-hidden flex flex-col min-h-[500px] md:h-[calc(100vh-250px)]"
           >
             {/* Detailed Records Table */}
-            <div className="card overflow-hidden">
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full text-xs">
+            <div className="flex-1 overflow-auto scrollbar-thin">
+              <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-edge bg-surface-2 text-left text-[10px] uppercase tracking-wider text-ink-3">
                       <th className="p-3 w-10"></th>
@@ -911,7 +910,6 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                   </tbody>
                 </table>
               </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
