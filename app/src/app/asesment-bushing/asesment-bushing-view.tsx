@@ -141,6 +141,16 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const bayUpper = r.bay_penghantar.toUpperCase();
       if (bayUpper.includes("500KV") || bayUpper.includes("500 KV")) tegangan = "500 kV";
 
+      const jR = (r.jenis_bushing_primer_r || "-").trim();
+      const jS = (r.jenis_bushing_primer_s || "-").trim();
+      const jT = (r.jenis_bushing_primer_t || "-").trim();
+      const mR = (r.merk_primer_r || "-").trim();
+      const mS = (r.merk_primer_s || "-").trim();
+      const mT = (r.merk_primer_t || "-").trim();
+
+      const jenisBushing = Array.from(new Set([jR, jS, jT].filter(x => x !== "-"))).join(", ") || "-";
+      const merkBushing = Array.from(new Set([mR, mS, mT].filter(x => x !== "-"))).join(", ") || "-";
+
       return {
         id: `BSH-${String(r.id).padStart(3, "0")}`,
         dbId: r.id,
@@ -149,8 +159,10 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         bayTrafo: r.bay_penghantar,
         fasa: "3 Phase",
         tegangan,
-        jenisBushing: r.jenis_bushing_primer_r || "-",
-        merkBushing: r.merk_primer_r || "-",
+        jenisBushingList: [jR, jS, jT],
+        merkBushingList: [mR, mS, mT],
+        jenisBushing,
+        merkBushing,
         tahunBuat: (r.thn_buat || "-").trim(),
         parameterUji,
         hasilUji,
@@ -164,7 +176,10 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   }, [rows]);
 
   const uptOptions = useMemo(() => Array.from(new Set(records.map(r => r.upt))).sort(), [records]);
-  const jenisBushingOptions = useMemo(() => Array.from(new Set(records.map(r => r.jenisBushing))).sort(), [records]);
+  const jenisBushingOptions = useMemo(() => {
+    const all = records.flatMap(r => r.jenisBushingList).filter(x => x && x !== "-");
+    return Array.from(new Set(all)).sort();
+  }, [records]);
   const tahunOptions = useMemo(() => Array.from(new Set(records.map(r => r.tahunBuat))).sort(), [records]);
   const kondisiOptions = ["Very Good", "Good", "Fair", "Poor", "Critical"];
   const statusOptions = ["Open", "Close"];
@@ -172,7 +187,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
       const matchUpt = uptFilter.length === 0 || uptFilter.includes(r.upt);
-      const matchJenis = jenisBushingFilter.length === 0 || jenisBushingFilter.includes(r.jenisBushing);
+      const matchJenis = jenisBushingFilter.length === 0 || jenisBushingFilter.some(f => r.jenisBushingList.includes(f));
       const matchTahun = tahunFilter.length === 0 || tahunFilter.includes(r.tahunBuat);
       const matchKondisi = kondisiFilter.length === 0 || kondisiFilter.includes(r.kondisi.replace(/^\d-/, ""));
       const matchStatus = statusFilter.length === 0 || statusFilter.includes(r.statusTindakLanjut);
@@ -191,6 +206,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   // Aggregate Stats
   const stats = useMemo(() => {
     const total = filteredRecords.length;
+    let totalBushings = 0;
     let criticalCount = 0;
     let poorCount = 0;
     let fairCount = 0;
@@ -199,20 +215,27 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     let openCount = 0;
 
     filteredRecords.forEach((r) => {
-      if (r.kondisi === "5-Critical") criticalCount++;
-      else if (r.kondisi === "4-Poor") poorCount++;
-      else if (r.kondisi === "3-Fair") fairCount++;
-      else if (r.kondisi === "2-Good") goodCount++;
-      else if (r.kondisi === "1-Very Good") veryGoodCount++;
+      let bCount = 0;
+      r.jenisBushingList.forEach(b => {
+        if (b && b !== "-") bCount++;
+      });
+      totalBushings += bCount;
 
-      if (r.statusTindakLanjut === "Open") openCount++;
+      if (r.kondisi === "5-Critical") criticalCount += bCount;
+      else if (r.kondisi === "4-Poor") poorCount += bCount;
+      else if (r.kondisi === "3-Fair") fairCount += bCount;
+      else if (r.kondisi === "2-Good") goodCount += bCount;
+      else if (r.kondisi === "1-Very Good") veryGoodCount += bCount;
+
+      if (r.statusTindakLanjut === "Open") openCount += bCount;
     });
 
     const healthyCount = goodCount + veryGoodCount;
-    const healthIndex = total > 0 ? Math.round((healthyCount / total) * 100) : 100;
+    const healthIndex = totalBushings > 0 ? Math.round((healthyCount / totalBushings) * 100) : 100;
 
     return {
       total,
+      totalBushings,
       critical: criticalCount,
       poor: poorCount,
       fair: fairCount,
@@ -240,8 +263,9 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     
     // Dapatkan daftar unik jenis bushing dari data yang terfilter
     const jenisSet = new Set<string>();
-    filteredRecords.forEach(r => jenisSet.add(r.jenisBushing));
-    // Kita filter out yang '-' kalau perlu, tapi lebih baik tampilkan semua
+    filteredRecords.forEach(r => r.jenisBushingList.forEach(j => {
+      if (j !== "-") jenisSet.add(j);
+    }));
     const jenisArr = Array.from(jenisSet).sort();
 
     const palette = [
@@ -253,7 +277,15 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       return {
         name: jenis,
         data: upts.map((u) => {
-          return filteredRecords.filter(r => r.upt === u && r.jenisBushing === jenis).length;
+          let count = 0;
+          filteredRecords.forEach(r => {
+            if (r.upt === u) {
+              r.jenisBushingList.forEach(j => {
+                if (j === jenis) count++;
+              });
+            }
+          });
+          return count;
         }),
         color: palette[i % palette.length]
       };
@@ -276,7 +308,13 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       return {
         name: c.replace(/^\d-/, ""),
         data: upts.map((u) => {
-          return filteredRecords.filter(r => r.upt === u && r.kondisi === c).length;
+          let cnt = 0;
+          filteredRecords.forEach(r => {
+            if (r.upt === u && r.kondisi === c) {
+              cnt += r.jenisBushingList.filter(b => b && b !== "-").length;
+            }
+          });
+          return cnt;
         }),
         color: conditionColor(c)
       };
@@ -306,7 +344,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     filteredRecords.forEach(r => {
       const p = r.parameterUji;
       if (p !== "Lain-lain") {
-        paramCounts[p] = (paramCounts[p] || 0) + 1;
+        const bCount = r.jenisBushingList.filter(b => b && b !== "-").length;
+        paramCounts[p] = (paramCounts[p] || 0) + bCount;
       }
     });
 
@@ -325,8 +364,9 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   const jenisChartOption = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const p = r.jenisBushing;
-      counts[p] = (counts[p] || 0) + 1;
+      r.jenisBushingList.forEach(p => {
+        if (p && p !== "-") counts[p] = (counts[p] || 0) + 1;
+      });
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return hbarOption(
@@ -341,8 +381,9 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   const merkChartOption = useMemo(() => {
     const counts: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const p = r.merkBushing;
-      counts[p] = (counts[p] || 0) + 1;
+      r.merkBushingList.forEach(p => {
+        if (p && p !== "-") counts[p] = (counts[p] || 0) + 1;
+      });
     });
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return hbarOption(
@@ -364,9 +405,10 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const year = parseInt(r.tahunBuat, 10);
       if (!isNaN(year)) {
         const age = currentYear - year;
-        if (age >= 25) old++;
-        else if (age >= 15) mid++;
-        else newB++;
+        const bCount = r.jenisBushingList.filter(b => b && b !== "-").length;
+        if (age >= 25) old += bCount;
+        else if (age >= 15) mid += bCount;
+        else newB += bCount;
       }
     });
 
@@ -396,7 +438,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             title={<>Ringkasan Temuan & <br/>Kondisi Terkini</>}
             description="Status penanganan dan hasil pemantauan asesment bushing GI di lingkungan Hartrans 2."
             stats={[
-              { label: "Bushing Terpantau", value: `${stats.total}`, sub: "Trafo" },
+              { label: "Bushing Terpantau", value: `${stats.totalBushings}`, sub: "Unit" },
               { label: "Kondisi Critical/Poor", value: `${stats.criticalPoor}`, sub: "Temuan" },
               { label: "Tindak Lanjut (OPEN)", value: `${stats.open}`, sub: "Pekerjaan" },
               { label: "Health Index", value: `${stats.healthIndex}%` },
@@ -603,8 +645,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">Total Bushing Terpantau</span>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="num text-4xl font-extrabold tracking-tight">{stats.total}</span>
-            <span className="text-xs font-bold text-ink-3">Trafo</span>
+            <span className="num text-4xl font-extrabold tracking-tight">{stats.totalBushings}</span>
+            <span className="text-xs font-bold text-ink-3">Unit</span>
           </div>
           <div className="text-[10px] text-ink-3 mt-1">Data dari spreadsheet aktif</div>
         </div>
