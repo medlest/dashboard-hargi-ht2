@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Search, Info, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, LayoutGrid, ExternalLink, Presentation } from "lucide-react";
 import { conditionColor } from "@/lib/colors";
-import { pieOption, groupedBarOption, hbarOption, simpleBarOption } from "@/lib/echart-options";
+import { pieOption, groupedBarOption, hbarOption, simpleBarOption, stackedBarOption } from "@/lib/echart-options";
 import { ChartCard } from "@/components/chart-card";
 import { EChart, useChartTheme } from "@/components/echart";
 import { MultiSelect } from "@/components/multi-select";
@@ -51,6 +51,7 @@ export interface DBBushingRecord {
   kondisi_fisik: string;
   keterangan: string;
   link_evidence: string;
+  hasil_uji_tandel?: string;
 }
 
 export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
@@ -99,10 +100,12 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       }
 
       // Tentukan parameter uji utama
+      const tadelVal = (r.hasil_uji_tandel || "").trim().toUpperCase();
       let parameterUji = "Lain-lain";
       if (lvl && lvl !== "NORMAL" && lvl !== "TIDAK ADA DATA" && lvl !== "-") parameterUji = "Level Minyak";
       else if (fisik && fisik !== "NORMAL") parameterUji = "Kondisi Fisik";
       else if (thermo && thermo !== "NORMAL") parameterUji = "Hasil Thermovisi";
+      else if (tadelVal && tadelVal !== "NORMAL" && tadelVal !== "GOOD" && tadelVal !== "VERY GOOD" && tadelVal !== "-") parameterUji = "Hasil Uji Tadel";
       else if (ket.includes("tan delta") || ket.includes("tadel")) parameterUji = "Hasil Uji Tadel";
       else if (ket.includes("center tap")) parameterUji = "Kondisi Center Tap";
 
@@ -332,32 +335,76 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     );
   }, [filteredRecords, t]);
 
-  // ECharts: Parameter Uji vs Temuan
-  const parameterChartOption = useMemo(() => {
-    const paramCounts: Record<string, number> = {
-      "Level Minyak": 0,
-      "Hasil Thermovisi": 0,
-      "Kondisi Fisik": 0,
-      "Hasil Uji Tadel": 0,
-      "Kondisi Center Tap": 0
-    };
-    filteredRecords.forEach(r => {
-      const p = r.parameterUji;
-      if (p !== "Lain-lain") {
-        const bCount = r.jenisBushingList.filter(b => b && b !== "-").length;
-        paramCounts[p] = (paramCounts[p] || 0) + bCount;
+  // ECharts: Parameter Uji vs Temuan (Pie Charts per Parameter)
+  const parameterChartOptions = useMemo(() => {
+    const params = [
+      "Level Minyak",
+      "Hasil Thermovisi",
+      "Kondisi Fisik",
+      "Hasil Uji Tadel",
+      "Kondisi Center Tap",
+      "Lain-lain"
+    ];
+
+    return params.map(p => {
+      if (p === "Level Minyak") {
+        let normal = 0;
+        let medium = 0;
+        let low = 0;
+        filteredRecords.forEach(r => {
+          if (r.parameterUji === p) {
+            const lm = (r.original.level_minyak || "").trim().toUpperCase();
+            // Filter hanya untuk jenis bushing OIP
+            const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
+            if (lm === "NORMAL") normal += bCount;
+            else if (lm === "MEDIUM") medium += bCount;
+            else if (lm === "LOW") low += bCount;
+          }
+        });
+        const slices = [
+          { name: "NORMAL", value: normal, color: "#10b981" },
+          { name: "MEDIUM", value: medium, color: "#f59e0b" },
+          { name: "LOW", value: low, color: "#ef4444" },
+        ];
+        return { param: p, option: pieOption(t, slices), total: normal + medium + low };
+      } else if (p === "Hasil Uji Tadel") {
+        let critical = 0, poor = 0, fair = 0, good = 0, veryGood = 0;
+        filteredRecords.forEach(r => {
+          if (r.parameterUji === p) {
+            const val = (r.original.hasil_uji_tandel || "").trim().toUpperCase();
+            const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
+            if (val === "CRITICAL") critical += bCount;
+            else if (val === "POOR") poor += bCount;
+            else if (val === "FAIR") fair += bCount;
+            else if (val === "GOOD") good += bCount;
+            else if (val === "VERY GOOD") veryGood += bCount;
+          }
+        });
+        const slices = [
+          { name: "VERY GOOD", value: veryGood, color: conditionColor("1-Very Good") },
+          { name: "GOOD", value: good, color: conditionColor("2-Good") },
+          { name: "FAIR", value: fair, color: conditionColor("3-Fair") },
+          { name: "POOR", value: poor, color: conditionColor("4-Poor") },
+          { name: "CRITICAL", value: critical, color: conditionColor("5-Critical") },
+        ];
+        return { param: p, option: pieOption(t, slices), total: critical + poor + fair + good + veryGood };
+      } else {
+        const conds = ["1-Very Good", "2-Good", "3-Fair", "4-Poor", "5-Critical"];
+        let paramTotal = 0;
+        const slices = conds.map(c => {
+          let cnt = 0;
+          filteredRecords.forEach(r => {
+            if (r.parameterUji === p && r.kondisi === c) {
+              cnt += r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
+            }
+          });
+          paramTotal += cnt;
+          let label = c.replace(/^\d-/, "");
+          return { name: label, value: cnt, color: conditionColor(c) };
+        });
+        return { param: p, option: pieOption(t, slices), total: paramTotal };
       }
     });
-
-    const sortedParams = Object.entries(paramCounts)
-      .sort((a, b) => b[1] - a[1]);
-
-    return hbarOption(
-      t,
-      sortedParams.map(x => x[0]),
-      sortedParams.map(x => x[1]),
-      "var(--accent)"
-    );
   }, [filteredRecords, t]);
 
   // ECharts: Jenis Bushing
@@ -421,6 +468,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     return pieOption(t, slices);
   }, [filteredRecords, t]);
 
+
   // ===== Slide Deck Slides =====
   const slides = useMemo(() => {
     // Top 15 Open
@@ -475,11 +523,27 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl">
               <div className="flex flex-col gap-6">
-                <ChartCard title="Temuan per Parameter Uji" className="min-h-[300px] lg:h-72">
+                <ChartCard title="Temuan per Parameter Uji (OIP)" className="min-h-[300px] lg:h-auto lg:min-h-[18rem]">
                   {stats.total === 0 ? (
-                    <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
+                    <div className="flex h-72 items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                   ) : (
-                    <EChart key={`s-param-${t.key}`} option={parameterChartOption} />
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-2 h-full">
+                      {parameterChartOptions.map(pc => (
+                        <div key={pc.param} className="flex flex-col items-center h-40">
+                          <div className="text-[10px] font-bold text-ink mb-1 text-center h-6 flex items-center justify-center">
+                            {pc.param} ({pc.total})
+                          </div>
+                          <div className="flex-1 w-full relative">
+                            <EChart key={`s-param-${pc.param}-${t.key}`} option={pc.option} />
+                            {pc.total === 0 && (
+                              <div className="absolute inset-0 flex items-center justify-center text-[9px] text-ink-3 text-center pointer-events-none">
+                                Tidak ada temuan
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </ChartCard>
                 <ChartCard title="Grafik Kondisi Bushing per UPT" className="min-h-[300px] lg:h-72">
@@ -562,7 +626,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         )
       }
     ];
-  }, [filteredRecords, stats, t, uptTotalChartOption, uptChartOption, parameterChartOption, jenisChartOption, merkChartOption]);
+  }, [filteredRecords, stats, t, uptTotalChartOption, uptChartOption, parameterChartOptions, jenisChartOption, merkChartOption]);
 
   return (
     <div className="space-y-6">
@@ -777,18 +841,35 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             </ChartCard>
 
             {/* Chart 5: Top Parameter Uji */}
-            <ChartCard title="Analisis Temuan per Parameter Uji" className="h-80 col-span-1">
+            <ChartCard title="Analisis Temuan per Parameter Uji (OIP)" className="h-auto md:min-h-80 col-span-1 md:col-span-2">
               {stats.total === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-ink-3 text-xs">
+                <div className="flex h-80 flex-col items-center justify-center text-ink-3 text-xs">
                   Tidak ada data untuk filter saat ini.
                 </div>
               ) : (
-                <EChart key={`param-${t.key}`} option={parameterChartOption} />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-2">
+                  {parameterChartOptions.map(pc => (
+                    <div key={pc.param} className="flex flex-col items-center h-56">
+                      <div className="text-[11px] font-bold text-ink mb-1 text-center h-8 flex items-center justify-center">
+                        {pc.param}
+                        <span className="ml-1 text-ink-3">({pc.total})</span>
+                      </div>
+                      <div className="flex-1 w-full relative">
+                        <EChart key={`param-${pc.param}-${t.key}`} option={pc.option} />
+                        {pc.total === 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center text-[10px] text-ink-3 text-center pointer-events-none">
+                            Tidak ada temuan
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </ChartCard>
 
             {/* Chart 6: Kondisi Bushing per UPT */}
-            <ChartCard title="Grafik Kondisi Bushing per UPT" className="h-[300px] md:h-80 col-span-1">
+            <ChartCard title="Grafik Kondisi Bushing per UPT" className="h-[300px] md:h-80 col-span-1 md:col-span-2">
               {stats.total === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-ink-3 text-xs">
                   Tidak ada data untuk filter saat ini.

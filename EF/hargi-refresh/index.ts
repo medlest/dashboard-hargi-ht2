@@ -254,8 +254,10 @@ function mapAsesmentBushing(rows: string[][]) {
         level_minyak: clean(r[34]),
         hasil_thermovisi: clean(r[35]),
         kondisi_fisik: clean(r[36]),
-        keterangan: clean(r[37]),
-        link_evidence: clean(r[38]),
+        hasil_uji_tandel: clean(r[37]),
+        kondisi_center_tap: clean(r[38]),
+        keterangan: clean(r[39]),
+        link_evidence: clean(r[40]),
         raw: rawObj,
       };
     });

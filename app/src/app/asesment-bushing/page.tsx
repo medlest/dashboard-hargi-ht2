@@ -16,7 +16,7 @@ export default async function AsesmentBushingPage() {
                 jenis_bushing_skunder_r, merk_skunder_r, type_skunder_r, sn_skunder_r,
                 jenis_bushing_skunder_s, merk_skunder_s, type_skunder_s, sn_skunder_s,
                 jenis_bushing_skunder_t, merk_skunder_t, type_skunder_t, sn_skunder_t,
-                overall, level_minyak, hasil_thermovisi, kondisi_fisik, keterangan, link_evidence
+                overall, level_minyak, hasil_thermovisi, kondisi_fisik, keterangan, link_evidence, hasil_uji_tandel
          from hargi_ht2.asesment_bushing
       ) x) as rows,
       (select to_jsonb(m) from (
