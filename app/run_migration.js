@@ -2,7 +2,12 @@ const postgres = require('postgres');
 const fs = require('fs');
 const path = require('path');
 
-const sql = postgres('postgresql://ht2_app.mjgekmjnsipthcswazid:e11774d663ea47367eaa1630d1ee354b@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres', { ssl: 'require' });
+if (!process.env.DB_URL) {
+  console.error('DB_URL env wajib di-set sebelum menjalankan migration helper.');
+  process.exit(1);
+}
+
+const sql = postgres(process.env.DB_URL, { ssl: 'require', prepare: false });
 
 async function migrate() {
   try {

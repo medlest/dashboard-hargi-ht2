@@ -23,7 +23,7 @@ Tiga variabel yang dibutuhkan (penjelasan lengkap ada di `.env.example`):
 
 | Var | Isi |
 |---|---|
-| `DB_URL` | koneksi Postgres pooler — kolaborator memakai role **`ht2_app`**: CRUD penuh di schema `hargi_ht2` SAJA, schema lain ditolak |
+| `DB_URL` | koneksi Postgres pooler — kolaborator memakai role **`ht2_diagus`**: full access di schema `hargi_ht2` SAJA; schema lain ditolak untuk data/DDL |
 | `SUPABASE_URL` | URL project Supabase (untuk tombol Refresh) |
 | `SUPABASE_PUBLISHABLE_KEY` | bearer pemanggilan EF |
 

@@ -33,6 +33,7 @@
 | 12 | [OPERASIONAL](./12-OPERASIONAL.md) | Refresh data, audit, troubleshooting |
 | 13 | [KEPUTUSAN-TEKNIS](./13-KEPUTUSAN-TEKNIS.md) | ADR: keputusan penting + alasannya (jangan diulang debat) |
 | 14 | [TAMBAH-SUMBER-DATA](./14-TAMBAH-SUMBER-DATA.md) | How-to menambah sheet/sumber data baru (step-by-step + pembagian peran) |
+| 15 | [AKSES-DIAGUS](./15-AKSES-DIAGUS.md) | Role `ht2_diagus`, scope akses, connection string, dan verification |
 | — | [AUDIT_BASELINE](./AUDIT_BASELINE.md) | Audit aplikasi lama (Angular+FastAPI) yang digantikan dashboard ini |
 | — | [../AGENTS.md](../AGENTS.md) | Instruksi untuk **AI coding agent** (aturan keras + workflow) — dibaca otomatis oleh Claude Code dkk. |
 

@@ -44,7 +44,7 @@ Minta nilainya ke owner.
 | Role | Dipakai | Hak |
 |---|---|---|
 | `postgres` | production Vercel + EF (internal owner) | penuh — TIDAK dibagikan |
-| `ht2_app` | dev lokal kolaborator | CRUD + CREATE **hanya** di schema `hargi_ht2` (RLS policy per tabel); schema lain `permission denied`. Cabut akses: `drop owned by ht2_app; drop role ht2_app;` |
+| `ht2_diagus` | dev lokal kolaborator Diagus | Full access **hanya** di schema `hargi_ht2`: CRUD, CREATE, ALTER, DROP untuk object HT-2. Schema lain ditolak untuk operasi data/DDL; `public` hanya SELECT metadata extension bawaan. Cabut akses: rotate password atau drop role setelah ownership dipindah. |
 
 ### Kenapa pooler :6543, bukan direct :5432
 

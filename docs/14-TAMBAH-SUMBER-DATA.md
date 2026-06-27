@@ -46,13 +46,13 @@ create table hargi_ht2.<nama_tabel> (
   raw jsonb
 );
 alter table hargi_ht2.<nama_tabel> enable row level security;
--- akses kolaborator (role ht2_app) ikut default privileges, tapi RLS butuh policy:
-create policy ht2_app_all on hargi_ht2.<nama_tabel>
-  for all to ht2_app using (true) with check (true);
+-- akses kolaborator (role ht2_diagus) ikut default privileges, tapi RLS butuh policy:
+create policy ht2_diagus_all on hargi_ht2.<nama_tabel>
+  for all to ht2_diagus using (true) with check (true);
 ```
 
 > DDL **di-commit ke repo** sebagai file `.sql`, dieksekusinya oleh owner
-> (langkah 6) — role `ht2_app` sebenarnya bisa `CREATE` di schema ini, tapi
+> (langkah 6) — role `ht2_diagus` sebenarnya bisa `CREATE` di schema ini, tapi
 > tabel yang ditulis EF harus dibuat owner supaya kepemilikan & grant konsisten.
 
 ### 4. Tampilkan di halaman Next — `app/src/`
@@ -86,6 +86,6 @@ Owner menjalankan file SQL dari langkah 3 sebagai role `postgres`.
 - [ ] Mapping by-NAMA header, bukan posisi kolom?
 - [ ] Kolom `raw` jsonb ikut disimpan?
 - [ ] DELETE+INSERT ada DI DALAM transaksi + advisory lock yang sama?
-- [ ] Policy RLS untuk `ht2_app` dibuat?
+- [ ] Policy RLS untuk `ht2_diagus` dibuat?
 - [ ] Nama bulan/tanggal di sumber baru formatnya apa? (lihat pengalaman
       English vs Indonesia di [ADR-9](./13-KEPUTUSAN-TEKNIS.md))
