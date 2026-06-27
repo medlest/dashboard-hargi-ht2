@@ -399,7 +399,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             }
           });
           paramTotal += cnt;
-          let label = c.replace(/^\d-/, "");
+          const label = c.replace(/^\d-/, "");
           return { name: label, value: cnt, color: conditionColor(c) };
         });
         return { param: p, option: pieOption(t, slices), total: paramTotal };

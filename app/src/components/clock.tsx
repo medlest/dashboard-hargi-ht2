@@ -19,9 +19,12 @@ const fmtDate = (d: Date) =>
 export function Clock() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
+    const firstTick = setTimeout(() => setNow(new Date()), 0);
     const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
+    return () => {
+      clearTimeout(firstTick);
+      clearInterval(t);
+    };
   }, []);
 
   if (!now) return <div className="h-8 w-44" />;

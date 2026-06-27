@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS hargi_ht2.asesment_bushing (
   level_minyak text,
   hasil_thermovisi text,
   kondisi_fisik text,
+  hasil_uji_tandel text,
+  kondisi_center_tap text,
   keterangan text,
   link_evidence text,
   fetched_at timestamptz NOT NULL DEFAULT now(),
@@ -57,17 +59,19 @@ ADD COLUMN IF NOT EXISTS sheet_name_bushing text;
 COMMENT ON COLUMN hargi_ht2.refresh_log.sheet_modified_bushing IS 'Drive modifiedTime untuk sheet Asesment Bushing';
 COMMENT ON COLUMN hargi_ht2.refresh_log.sheet_name_bushing IS 'Judul spreadsheet Asesment Bushing';
 
--- Membuat policy RLS agar role ht2_app memiliki akses penuh (SELECT, INSERT, UPDATE, DELETE)
+-- Membuat policy RLS agar role ht2_diagus memiliki akses penuh (SELECT, INSERT, UPDATE, DELETE)
 DO $$
 BEGIN
+  DROP POLICY IF EXISTS ht2_app_all ON hargi_ht2.asesment_bushing;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'hargi_ht2' 
       AND tablename = 'asesment_bushing' 
-      AND policyname = 'ht2_app_all'
+      AND policyname = 'ht2_diagus_all'
   ) THEN
-    CREATE POLICY ht2_app_all ON hargi_ht2.asesment_bushing
-      FOR ALL TO ht2_app USING (true) WITH CHECK (true);
+    CREATE POLICY ht2_diagus_all ON hargi_ht2.asesment_bushing
+      FOR ALL TO ht2_diagus USING (true) WITH CHECK (true);
   END IF;
 END
 $$;

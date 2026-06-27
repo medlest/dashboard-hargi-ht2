@@ -7,7 +7,10 @@ import { Sun, Moon } from "lucide-react";
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const mountTick = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(mountTick);
+  }, []);
 
   if (!mounted) return <div className="h-8 w-8" />;
   const dark = resolvedTheme === "dark";

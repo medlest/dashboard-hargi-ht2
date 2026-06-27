@@ -1,8 +1,13 @@
 import { sql } from "@/lib/db";
 import { PageHeader } from "@/components/page-header";
-import { AsesmentBushingView } from "./asesment-bushing-view";
+import { AsesmentBushingView, type DBBushingRecord } from "./asesment-bushing-view";
 
 export const dynamic = "force-dynamic";
+
+type AsesmentBushingQueryRow = {
+  rows: DBBushingRecord[];
+  meta: { synced_at: string } | null;
+};
 
 export default async function AsesmentBushingPage() {
   // Ambil data asesment bushing dan metadata refresh terakhir dalam satu query (ADR-3)
@@ -24,10 +29,7 @@ export default async function AsesmentBushingPage() {
          from hargi_ht2.refresh_log
          where status = 'success' and finished_at is not null
          order by id desc limit 1) m) as meta
-  `) as unknown as [{
-    rows: any[];
-    meta: { synced_at: string } | null;
-  }];
+  `) as unknown as [AsesmentBushingQueryRow];
 
   const { rows, meta } = row;
 

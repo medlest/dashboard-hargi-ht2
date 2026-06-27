@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   Crosshair, Plus, Minus, Navigation2, Mountain, Globe, Maximize2, Minimize2,
-  Map as MapIcon, ChevronDown, ChevronRight, ListOrdered, Building2, Palette,
+  ChevronDown, ChevronRight, ListOrdered, Building2, Palette,
   Filter, Hash, Sun, Zap, X,
 } from "lucide-react";
 import { PALETTE } from "@/lib/colors";
@@ -35,6 +35,77 @@ const GiMap = dynamic(() => import("./gi-map").then((m) => m.GiMap), {
 });
 
 type MenuKey = "gi" | "warna" | "unit" | null;
+
+function CheckItem({
+  icon: Icon, label, on, onClick, color = "#f59e0b", count, isLight, mut, hov,
+}: {
+  icon?: LucideIcon;
+  label: string;
+  on: boolean;
+  onClick: () => void;
+  color?: string;
+  count?: number;
+  isLight: boolean;
+  mut: string;
+  hov: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors duration-150 ${
+        on ? (isLight ? "bg-amber-500/15 text-amber-700" : "bg-amber-500/20 text-amber-300") : `${mut} ${hov}`
+      }`}
+      style={on && color !== "#f59e0b" ? { backgroundColor: color + "26", color: isLight ? undefined : color } : undefined}
+    >
+      {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : (
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      )}
+      <span className="flex-1 text-xs">{label}</span>
+      {typeof count === "number" && <span className="num text-[10px] opacity-70">{count}</span>}
+      <span
+        className={`flex h-3 w-3 items-center justify-center rounded border text-[9px] ${
+          on ? "border-transparent text-white" : isLight ? "border-black/30" : "border-white/30"
+        }`}
+        style={on ? { backgroundColor: color } : undefined}
+      >
+        {on ? "✓" : ""}
+      </span>
+    </button>
+  );
+}
+
+function GroupButton({
+  icon: Icon, label, menu, activeCount, expanded, onExpandedChange, isLight, mut, hov,
+}: {
+  icon: LucideIcon;
+  label: string;
+  menu: MenuKey;
+  activeCount?: number;
+  expanded: MenuKey;
+  onExpandedChange: (menu: MenuKey) => void;
+  isLight: boolean;
+  mut: string;
+  hov: string;
+}) {
+  const open = expanded === menu;
+  const active = (activeCount ?? 0) > 0;
+  return (
+    <button
+      type="button"
+      onClick={() => onExpandedChange(open ? null : menu)}
+      className={`flex w-full items-center gap-2 px-2.5 py-1.5 transition-all duration-200 ${
+        active ? (isLight ? "bg-amber-500/20 text-amber-700" : "bg-amber-500/25 text-amber-300") : `${mut} ${hov}`
+      }`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      <span className="flex-1 text-left text-xs font-bold">
+        {label}{active ? ` (${activeCount})` : ""}
+      </span>
+      {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+    </button>
+  );
+}
 
 export function AssetMapsView({ points }: { points: GiPoint[] }) {
   const { resolvedTheme } = useTheme();
@@ -156,7 +227,6 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
     };
     m.on("style.load", reapply);
     return () => { m.off("style.load", reapply); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapInst, is3D, isGlobe]);
   // Reset View = balik ke kondisi default persis kayak habis refresh page
   const resetNorth = () => {
@@ -190,61 +260,6 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
   const hov = isLight ? "hover:bg-black/5" : "hover:bg-white/10";
   const sep = isLight ? "bg-black/10" : "bg-white/10";
   const panel = `backdrop-blur-md rounded-lg border ${cardBg} ${cardBd}`;
-
-  /* ── Item checklist (pattern Thor Lightning) ── */
-  function CheckItem({
-    icon: Icon, label, on, onClick, color = "#f59e0b", count,
-  }: {
-    icon?: LucideIcon; label: string; on: boolean; onClick: () => void;
-    color?: string; count?: number;
-  }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-colors duration-150 ${
-          on ? (isLight ? "bg-amber-500/15 text-amber-700" : "bg-amber-500/20 text-amber-300") : `${mut} ${hov}`
-        }`}
-        style={on && color !== "#f59e0b" ? { backgroundColor: color + "26", color: isLight ? undefined : color } : undefined}
-      >
-        {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : (
-          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-        )}
-        <span className="flex-1 text-xs">{label}</span>
-        {typeof count === "number" && <span className="num text-[10px] opacity-70">{count}</span>}
-        <span
-          className={`flex h-3 w-3 items-center justify-center rounded border text-[9px] ${
-            on ? "border-transparent text-white" : isLight ? "border-black/30" : "border-white/30"
-          }`}
-          style={on ? { backgroundColor: color } : undefined}
-        >
-          {on ? "✓" : ""}
-        </span>
-      </button>
-    );
-  }
-
-  function GroupButton({
-    icon: Icon, label, menu, activeCount,
-  }: { icon: LucideIcon; label: string; menu: MenuKey; activeCount?: number }) {
-    const open = expanded === menu;
-    const active = (activeCount ?? 0) > 0;
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(open ? null : menu)}
-        className={`flex w-full items-center gap-2 px-2.5 py-1.5 transition-all duration-200 ${
-          active ? (isLight ? "bg-amber-500/20 text-amber-700" : "bg-amber-500/25 text-amber-300") : `${mut} ${hov}`
-        }`}
-      >
-        <Icon className="h-3.5 w-3.5" />
-        <span className="flex-1 text-left text-xs font-bold">
-          {label}{active ? ` (${activeCount})` : ""}
-        </span>
-        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-      </button>
-    );
-  }
 
   const railBtn = `flex h-9 w-9 items-center justify-center transition-colors ${mut} ${hov}`;
 
@@ -293,24 +308,24 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
 
           <div className={`${panel} overflow-hidden`}>
             {/* Grup: Gardu Induk */}
-            <GroupButton icon={Building2} label="Gardu Induk" menu="gi"
+            <GroupButton icon={Building2} label="Gardu Induk" menu="gi" expanded={expanded} onExpandedChange={setExpanded} isLight={isLight} mut={mut} hov={hov}
               activeCount={[showGi, showLabels, showRanking].filter(Boolean).length} />
             <div className={`overflow-hidden transition-all duration-300 ${expanded === "gi" ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
               <div className={`space-y-0.5 border-t px-1.5 py-1 ${cardBd}`}>
-                <CheckItem icon={Building2} label="Marker GI" on={showGi} onClick={() => setShowGi(!showGi)} count={filtered.length} />
-                <CheckItem icon={Hash} label="Label Jumlah" on={showLabels} onClick={() => setShowLabels(!showLabels)} />
-                <CheckItem icon={ListOrdered} label="Panel Ranking" on={showRanking} onClick={() => setShowRanking(!showRanking)} />
+                <CheckItem icon={Building2} label="Marker GI" on={showGi} onClick={() => setShowGi(!showGi)} count={filtered.length} isLight={isLight} mut={mut} hov={hov} />
+                <CheckItem icon={Hash} label="Label Jumlah" on={showLabels} onClick={() => setShowLabels(!showLabels)} isLight={isLight} mut={mut} hov={hov} />
+                <CheckItem icon={ListOrdered} label="Panel Ranking" on={showRanking} onClick={() => setShowRanking(!showRanking)} isLight={isLight} mut={mut} hov={hov} />
               </div>
             </div>
 
             <div className={`h-px ${sep}`} />
 
             {/* Grup: Warna */}
-            <GroupButton icon={Palette} label="Mode Warna" menu="warna" />
+            <GroupButton icon={Palette} label="Mode Warna" menu="warna" expanded={expanded} onExpandedChange={setExpanded} isLight={isLight} mut={mut} hov={hov} />
             <div className={`overflow-hidden transition-all duration-300 ${expanded === "warna" ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
               <div className={`space-y-0.5 border-t px-1.5 py-1 ${cardBd}`}>
-                <CheckItem icon={Sun} label="Intensitas Gangguan" on={colorMode === "intensitas"} onClick={() => setColorMode("intensitas")} />
-                <CheckItem icon={Palette} label="Warna per UPT" on={colorMode === "upt"} onClick={() => setColorMode("upt")} />
+                <CheckItem icon={Sun} label="Intensitas Gangguan" on={colorMode === "intensitas"} onClick={() => setColorMode("intensitas")} isLight={isLight} mut={mut} hov={hov} />
+                <CheckItem icon={Palette} label="Warna per UPT" on={colorMode === "upt"} onClick={() => setColorMode("upt")} isLight={isLight} mut={mut} hov={hov} />
                 <div className={`mx-2 my-1 h-px ${sep}`} />
                 {(colorMode === "upt"
                   ? units.map((u) => ({ c: unitColors[u], l: u.replace(/^UPT /, "") }))
@@ -332,7 +347,7 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
             <div className={`h-px ${sep}`} />
 
             {/* Grup: Filter Unit (checklist ala Thor) */}
-            <GroupButton icon={Filter} label="Filter Unit" menu="unit" activeCount={selUnit.length} />
+            <GroupButton icon={Filter} label="Filter Unit" menu="unit" activeCount={selUnit.length} expanded={expanded} onExpandedChange={setExpanded} isLight={isLight} mut={mut} hov={hov} />
             <div className={`overflow-hidden transition-all duration-300 ${expanded === "unit" ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
               <div className={`space-y-0.5 border-t px-1.5 py-1 ${cardBd}`}>
                 {selUnit.length > 0 && (
@@ -349,6 +364,9 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
                     onClick={() => toggleUnit(u)}
                     color={unitColors[u]}
                     count={points.filter((p) => p.unit === u).length}
+                    isLight={isLight}
+                    mut={mut}
+                    hov={hov}
                   />
                 ))}
               </div>

@@ -99,6 +99,18 @@ create policy ht2_diagus_all on hargi_ht2.<nama_tabel>
 
 ## Verification Terakhir
 
+Status terakhir: diverifikasi ulang pada 2026-06-27 setelah cleanup policy.
+
+Policy final di schema `hargi_ht2`:
+
+```text
+abo_2026           ht2_diagus_all FOR ALL TO ht2_diagus
+asesment_bushing   ht2_diagus_all FOR ALL TO ht2_diagus
+ce_abo_findings    ht2_diagus_all FOR ALL TO ht2_diagus
+gangguan_trafo     ht2_diagus_all FOR ALL TO ht2_diagus
+refresh_log        ht2_diagus_all FOR ALL TO ht2_diagus
+```
+
 Sudah dites sebagai `ht2_diagus`:
 
 ```text
@@ -114,6 +126,10 @@ PASS: public ALTER ditolak
 PASS: auth.users SELECT ditolak
 PASS: CREATE SCHEMA ditolak
 ```
+
+Supabase Advisor sempat menandai policy SELECT dobel di `hargi_ht2`
+(`ht2_app_write` + `ht2_reader_select`). Sudah dibersihkan: sekarang tiap
+tabel HT-2 memakai satu policy `ht2_diagus_all` saja.
 
 ## Rujukan Resmi
 

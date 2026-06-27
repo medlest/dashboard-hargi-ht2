@@ -1,13 +1,29 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const postgres = require('postgres');
-require('dotenv').config({ path: '.env.local' });
-const sql = postgres(process.env.DB_URL);
+
+if (!process.env.DB_URL) {
+  console.error('DB_URL env wajib di-set sebelum menjalankan helper ini.');
+  process.exit(1);
+}
+
+const sql = postgres(process.env.DB_URL, { ssl: 'require', prepare: false });
+
 async function run() {
   try {
-    await sql\ALTER TABLE hargi_ht2.asesment_bushing ADD COLUMN IF NOT EXISTS hasil_uji_tadel text\;
-    console.log('Column added successfully!');
+    await sql`
+      alter table hargi_ht2.asesment_bushing
+        add column if not exists hasil_uji_tandel text,
+        add column if not exists kondisi_center_tap text`;
+    console.log('Columns added successfully!');
   } catch (e) {
     console.error(e);
+    process.exitCode = 1;
+  } finally {
+    await sql.end();
   }
-  process.exit(0);
 }
-run();
+
+run().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});
