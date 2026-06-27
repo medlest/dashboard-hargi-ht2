@@ -54,6 +54,65 @@ export interface DBBushingRecord {
   hasil_uji_tandel?: string;
 }
 
+const PARAMS_CONFIG = [
+  {
+    name: "Level Minyak",
+    classes: ["NORMAL", "MEDIUM", "LOW"],
+    colors: { "NORMAL": "#10b981", "MEDIUM": "#f59e0b", "LOW": "#ef4444" },
+    getValue: (r: any) => {
+      const v = (r.original.level_minyak || "").trim().toUpperCase();
+      if (v === "LOW") return "LOW";
+      if (v === "MEDIUM") return "MEDIUM";
+      return "NORMAL";
+    }
+  },
+  {
+    name: "Hasil Thermovisi",
+    classes: ["NORMAL", "HOTSPOT"],
+    colors: { "NORMAL": "#10b981", "HOTSPOT": "#ef4444" },
+    getValue: (r: any) => {
+      const v = (r.original.hasil_thermovisi || "").trim().toUpperCase();
+      if (v === "HOTSPOT") return "HOTSPOT";
+      return "NORMAL";
+    }
+  },
+  {
+    name: "Kondisi Fisik",
+    classes: ["NORMAL", "REMBES", "RETAK"],
+    colors: { "NORMAL": "#10b981", "REMBES": "#f59e0b", "RETAK": "#ef4444" },
+    getValue: (r: any) => {
+      const v = (r.original.kondisi_fisik || "").trim().toUpperCase();
+      const ket = (r.original.keterangan || "").trim().toUpperCase();
+      if (v.includes("RETAK") || ket.includes("RETAK") || ket.includes("PECAH") || ket.includes("GOMPEL") || ket.includes("CRITICAL")) return "RETAK";
+      if (v.includes("REMBES") || ket.includes("REMBES") || ket.includes("BOCOR")) return "REMBES";
+      return "NORMAL";
+    }
+  },
+  {
+    name: "Hasil Uji Tadel",
+    classes: ["VERY GOOD", "GOOD", "FAIR", "POOR", "CRITICAL"],
+    colors: { "VERY GOOD": "#3b82f6", "GOOD": "#10b981", "FAIR": "#fbbf24", "POOR": "#f87171", "CRITICAL": "#b91c1c" },
+    getValue: (r: any) => {
+      const v = (r.original.hasil_uji_tandel || "").trim().toUpperCase();
+      if (v === "CRITICAL") return "CRITICAL";
+      if (v === "POOR") return "POOR";
+      if (v === "FAIR") return "FAIR";
+      if (v === "VERY GOOD") return "VERY GOOD";
+      return "GOOD"; // Fallback to GOOD because default Tadel score is 2-Good
+    }
+  },
+  {
+    name: "Kondisi Center Tap",
+    classes: ["NORMAL", "ANOMALI"],
+    colors: { "NORMAL": "#10b981", "ANOMALI": "#ef4444" },
+    getValue: (r: any) => {
+      const ket = (r.original.keterangan || "").trim().toUpperCase();
+      if (ket.includes("CENTER TAP") && r.kondisi !== "1-Very Good" && r.kondisi !== "2-Good") return "ANOMALI";
+      return "NORMAL";
+    }
+  }
+];
+
 export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   const t = useChartTheme();
   
@@ -80,13 +139,23 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const fisik = (r.kondisi_fisik || "").trim().toUpperCase();
       const ket = (r.keterangan || "").trim().toLowerCase();
 
-      // Tentukan kondisi berdasarkan level minyak, thermovisi, dan kondisi fisik
-      let kondisi: "1-Very Good" | "2-Good" | "3-Fair" | "4-Poor" | "5-Critical" = "2-Good";
+      // Tentukan parameter uji utama (ambil tadelVal di awal untuk penentuan kondisi)
+      const tadelVal = (r.hasil_uji_tandel || "").trim().toUpperCase();
+
+      // Tentukan kondisi berdasarkan level minyak, thermovisi, kondisi fisik, dan hasil tandel
+      let score = 2; // Default 2-Good
+      if (tadelVal === "VERY GOOD") score = 1;
+
+      if (lvl === "MEDIUM") score = Math.max(score, 3);
+      if (lvl === "LOW") score = Math.max(score, 4);
       
-      if (lvl === "LOW") kondisi = "4-Poor";
-      else if (lvl === "MEDIUM") kondisi = "3-Fair";
-      
-      if (fisik === "REMBES") kondisi = "3-Fair";
+      if (fisik === "REMBES") score = Math.max(score, 3);
+
+      if (thermo === "HOTSPOT") score = Math.max(score, 4);
+
+      if (tadelVal === "FAIR") score = Math.max(score, 3);
+      if (tadelVal === "POOR") score = Math.max(score, 4);
+      if (tadelVal === "CRITICAL") score = Math.max(score, 5);
 
       if (
         ket.includes("pecah") || 
@@ -94,13 +163,18 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         ket.includes("gompel") || 
         ket.includes("critical")
       ) {
-        kondisi = "5-Critical";
+        score = Math.max(score, 5);
       } else if (ket.includes("bocor") || ket.includes("rembes") || ket.includes("low")) {
-        kondisi = "3-Fair";
+        score = Math.max(score, 3);
       }
 
-      // Tentukan parameter uji utama
-      const tadelVal = (r.hasil_uji_tandel || "").trim().toUpperCase();
+      let kondisi: "1-Very Good" | "2-Good" | "3-Fair" | "4-Poor" | "5-Critical";
+      if (score === 5) kondisi = "5-Critical";
+      else if (score === 4) kondisi = "4-Poor";
+      else if (score === 3) kondisi = "3-Fair";
+      else if (score === 2) kondisi = "2-Good";
+      else kondisi = "1-Very Good";
+
       let parameterUji = "Lain-lain";
       if (lvl && lvl !== "NORMAL" && lvl !== "TIDAK ADA DATA" && lvl !== "-") parameterUji = "Level Minyak";
       else if (fisik && fisik !== "NORMAL") parameterUji = "Kondisi Fisik";
@@ -302,108 +376,160 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     );
   }, [filteredRecords, t]);
 
-  // ECharts: Kondisi Bushing per UPT
+  // ECharts: Grafik Anomali Parameter Uji per UPT (Grouped & Stacked dengan Klasifikasi Asli)
   const uptChartOption = useMemo(() => {
     const upts = Array.from(new Set(filteredRecords.map(r => r.upt))).sort();
-    const conds = ["1-Very Good", "2-Good", "3-Fair", "4-Poor", "5-Critical"];
     
-    const series = conds.map((c) => {
-      return {
-        name: c.replace(/^\d-/, ""),
-        data: upts.map((u) => {
-          let cnt = 0;
-          filteredRecords.forEach(r => {
-            if (r.upt === u && r.kondisi === c) {
-              cnt += r.jenisBushingList.filter(b => b && b !== "-").length;
-            }
-          });
-          return cnt;
-        }),
-        color: conditionColor(c)
-      };
+    const dataMap: Record<string, Record<string, Record<string, number>>> = {};
+    const totalMap: Record<string, Record<string, number>> = {};
+    const allLegendItems = new Set<string>();
+
+    upts.forEach(u => {
+      dataMap[u] = {};
+      PARAMS_CONFIG.forEach(pc => {
+        dataMap[u][pc.name] = {};
+        pc.classes.forEach(cls => {
+          dataMap[u][pc.name][cls] = 0;
+          allLegendItems.add(cls);
+        });
+        if (!totalMap[pc.name]) totalMap[pc.name] = {};
+        totalMap[pc.name][u] = 0;
+      });
     });
 
-    return groupedBarOption(
-      t, 
-      upts.map(u => u.replace("UPT ", "")), 
-      series.map(s => ({
-        name: s.name,
-        data: s.data,
-        color: s.color
-      })),
-      { rotateLabel: 35 }
-    );
+    filteredRecords.forEach(r => {
+      const u = r.upt;
+      const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
+      if (bCount === 0) return;
+
+      PARAMS_CONFIG.forEach(pc => {
+        const cls = pc.getValue(r);
+        if (dataMap[u][pc.name][cls] !== undefined) {
+          dataMap[u][pc.name][cls] += bCount;
+        }
+        totalMap[pc.name][u] += bCount;
+      });
+    });
+
+    const series: any[] = [];
+    
+    // Buat stacked bar untuk setiap kelas di setiap parameter
+    PARAMS_CONFIG.forEach(pc => {
+      pc.classes.forEach(cls => {
+        series.push({
+          name: cls,
+          type: "bar",
+          stack: pc.name,
+          data: upts.map(u => dataMap[u][pc.name][cls]),
+          itemStyle: { color: (pc.colors as any)[cls] },
+          label: {
+            show: true,
+            color: "#fff",
+            fontSize: 10,
+            fontWeight: "bold",
+            formatter: (param: any) => param.value > 0 ? param.value : ""
+          }
+        });
+      });
+    });
+
+    // Tambahkan bar transparan di ujung stack untuk memunculkan label total
+    PARAMS_CONFIG.forEach(pc => {
+      series.push({
+        name: "Total " + pc.name,
+        type: "bar",
+        stack: pc.name,
+        data: upts.map(() => 0), // 0 agar ada di posisi teratas stack
+        itemStyle: { color: "transparent" },
+        tooltip: { show: false },
+        label: {
+          show: true,
+          position: "top",
+          color: t.tickStrong,
+          fontSize: 9,
+          fontWeight: "bold",
+          rotate: 90,
+          align: 'left',
+          verticalAlign: 'middle',
+          distance: 5,
+          formatter: (param: any) => {
+            const sum = totalMap[pc.name][upts[param.dataIndex]];
+            return sum > 0 ? `${pc.name} (${sum})` : "";
+          }
+        }
+      });
+    });
+
+    // xAxis category formatting
+    const xAxisData = upts.map(u => u.replace("UPT ", ""));
+
+    return {
+      tooltip: { 
+        trigger: "axis" as const, 
+        axisPointer: { type: "shadow" as const },
+        // Custom formatter to only show non-zero and group by parameter conceptually
+        formatter: (paramsPayload: any) => {
+          const paramsArray = Array.isArray(paramsPayload) ? paramsPayload : [paramsPayload];
+          const valid = paramsArray.filter(pa => pa.value > 0);
+          if (valid.length === 0) return "";
+          const pName = valid[0].name;
+          let html = `<b>${pName}</b><br/>`;
+          valid.forEach(v => {
+             // seriesId has format "seriesName\0stackName" internally in echarts, but we can just use seriesName and stack (which is the parameter)
+             html += `${v.marker} ${v.seriesName} (${v.seriesId.split('\\0')[1] || v.seriesId}): <b>${v.value}</b><br/>`;
+          });
+          return html;
+        }
+      },
+      legend: {
+        data: Array.from(allLegendItems),
+        bottom: 0,
+        type: "scroll",
+        textStyle: { color: t.tick, fontSize: 11 }
+      },
+      grid: { left: 8, right: 16, top: 120, bottom: 34, containLabel: true },
+      xAxis: {
+        type: "category" as const,
+        data: xAxisData,
+        axisLabel: { color: t.tick, fontSize: 12, interval: 0, rotate: 35 },
+        axisLine: { lineStyle: { color: t.grid } },
+        axisTick: { show: false },
+      },
+      yAxis: {
+        type: "value" as const,
+        axisLabel: { color: t.tick, fontSize: 12 },
+        splitLine: { lineStyle: { color: t.grid } },
+      },
+      series: series
+    };
   }, [filteredRecords, t]);
 
   // ECharts: Parameter Uji vs Temuan (Pie Charts per Parameter)
   const parameterChartOptions = useMemo(() => {
-    const params = [
-      "Level Minyak",
-      "Hasil Thermovisi",
-      "Kondisi Fisik",
-      "Hasil Uji Tadel",
-      "Kondisi Center Tap",
-      "Lain-lain"
-    ];
+    return PARAMS_CONFIG.map(pc => {
+      const countMap: Record<string, number> = {};
+      pc.classes.forEach(cls => { countMap[cls] = 0; });
+      let total = 0;
 
-    return params.map(p => {
-      if (p === "Level Minyak") {
-        let normal = 0;
-        let medium = 0;
-        let low = 0;
-        filteredRecords.forEach(r => {
-          if (r.parameterUji === p) {
-            const lm = (r.original.level_minyak || "").trim().toUpperCase();
-            // Filter hanya untuk jenis bushing OIP
-            const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
-            if (lm === "NORMAL") normal += bCount;
-            else if (lm === "MEDIUM") medium += bCount;
-            else if (lm === "LOW") low += bCount;
+      filteredRecords.forEach(r => {
+        // Harus difilter khusus untuk bushing OIP, karena judulnya "Analisis Temuan per Parameter Uji (OIP)"
+        const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
+        if (bCount > 0) {
+          const cls = pc.getValue(r);
+          if (countMap[cls] !== undefined) {
+            countMap[cls] += bCount;
+            total += bCount;
           }
-        });
-        const slices = [
-          { name: "NORMAL", value: normal, color: "#10b981" },
-          { name: "MEDIUM", value: medium, color: "#f59e0b" },
-          { name: "LOW", value: low, color: "#ef4444" },
-        ];
-        return { param: p, option: pieOption(t, slices), total: normal + medium + low };
-      } else if (p === "Hasil Uji Tadel") {
-        let critical = 0, poor = 0, fair = 0, good = 0, veryGood = 0;
-        filteredRecords.forEach(r => {
-          if (r.parameterUji === p) {
-            const val = (r.original.hasil_uji_tandel || "").trim().toUpperCase();
-            const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
-            if (val === "CRITICAL") critical += bCount;
-            else if (val === "POOR") poor += bCount;
-            else if (val === "FAIR") fair += bCount;
-            else if (val === "GOOD") good += bCount;
-            else if (val === "VERY GOOD") veryGood += bCount;
-          }
-        });
-        const slices = [
-          { name: "VERY GOOD", value: veryGood, color: conditionColor("1-Very Good") },
-          { name: "GOOD", value: good, color: conditionColor("2-Good") },
-          { name: "FAIR", value: fair, color: conditionColor("3-Fair") },
-          { name: "POOR", value: poor, color: conditionColor("4-Poor") },
-          { name: "CRITICAL", value: critical, color: conditionColor("5-Critical") },
-        ];
-        return { param: p, option: pieOption(t, slices), total: critical + poor + fair + good + veryGood };
-      } else {
-        const conds = ["1-Very Good", "2-Good", "3-Fair", "4-Poor", "5-Critical"];
-        let paramTotal = 0;
-        const slices = conds.map(c => {
-          let cnt = 0;
-          filteredRecords.forEach(r => {
-            if (r.parameterUji === p && r.kondisi === c) {
-              cnt += r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
-            }
-          });
-          paramTotal += cnt;
-          const label = c.replace(/^\d-/, "");
-          return { name: label, value: cnt, color: conditionColor(c) };
-        });
-        return { param: p, option: pieOption(t, slices), total: paramTotal };
-      }
+        }
+      });
+
+      const slices = pc.classes.map(cls => ({
+        name: cls,
+        value: countMap[cls],
+        color: (pc.colors as any)[cls]
+      }));
+
+      return { param: pc.name, option: pieOption(t, slices), total };
     });
   }, [filteredRecords, t]);
 
@@ -415,7 +541,12 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         if (p && p !== "-") counts[p] = (counts[p] || 0) + 1;
       });
     });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    let sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 10) {
+      const top10 = sorted.slice(0, 10);
+      const others = sorted.slice(10).reduce((sum, item) => sum + item[1], 0);
+      sorted = [...top10, ["Lainnya", others]];
+    }
     return hbarOption(
       t,
       sorted.map(x => x[0]),
@@ -432,7 +563,12 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         if (p && p !== "-") counts[p] = (counts[p] || 0) + 1;
       });
     });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    let sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 10) {
+      const top10 = sorted.slice(0, 10);
+      const others = sorted.slice(10).reduce((sum, item) => sum + item[1], 0);
+      sorted = [...top10, ["Lainnya", others]];
+    }
     return hbarOption(
       t,
       sorted.map(x => x[0]),
@@ -478,13 +614,13 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
 
     return [
       {
-        key: "summary",
-        label: "Ringkasan",
+        key: "all-in-one",
+        label: "Laporan Asesment",
         node: (
           <DeckCover
-            eyebrow="Monitoring Asesment Bushing"
-            title={<>Ringkasan Temuan & <br/>Kondisi Terkini</>}
-            description="Status penanganan dan hasil pemantauan asesment bushing GI di lingkungan Hartrans 2."
+            eyebrow="Dashboard Executive"
+            title={<>Laporan Komprehensif <br/>Asesment Bushing</>}
+            description="Ringkasan, analisis teknis, dan daftar prioritas tindak lanjut secara keseluruhan."
             stats={[
               { label: "Bushing Terpantau", value: `${stats.totalBushings}`, sub: "Unit" },
               { label: "Kondisi Critical/Poor", value: `${stats.criticalPoor}`, sub: "Temuan" },
@@ -492,182 +628,170 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
               { label: "Health Index", value: `${stats.healthIndex}%` },
             ]}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl">
-              <ChartCard title="Sebaran Jenis Bushing per UPT" className="min-h-[300px] lg:h-[22rem]">
-                {stats.total === 0 ? (
-                  <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
-                ) : (
-                  <EChart key={`s-upt-pie-${t.key}`} option={uptTotalChartOption} />
-                )}
-              </ChartCard>
-              <ChartCard title="Klasifikasi Usia Bushing" className="min-h-[300px] lg:h-[22rem]">
-                {stats.total === 0 ? (
-                  <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
-                ) : (
-                  <EChart key={`s-usia-${t.key}`} option={usiaChartOption} />
-                )}
-              </ChartCard>
-            </div>
-          </DeckCover>
-        ),
-      },
-      {
-        key: "analysis",
-        label: "Analisis Bushing",
-        node: (
-          <DeckCover
-            eyebrow="Analisis Data"
-            title="Profil Parameter Uji & Spesifikasi Aset"
-            description="Rincian masalah yang paling banyak ditemukan beserta sebaran spesifikasi aset."
-            stats={[]}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full max-w-6xl">
-              <div className="flex flex-col gap-6">
-                <ChartCard title="Temuan per Parameter Uji (OIP)" className="min-h-[300px] lg:h-auto lg:min-h-[18rem]">
-                  {stats.total === 0 ? (
-                    <div className="flex h-72 items-center justify-center text-xs text-ink-3">Tidak ada data</div>
-                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-2 h-full">
-                      {parameterChartOptions.map(pc => (
-                        <div key={pc.param} className="flex flex-col items-center h-40">
-                          <div className="text-[10px] font-bold text-ink mb-1 text-center h-6 flex items-center justify-center">
-                            {pc.param} ({pc.total})
-                          </div>
-                          <div className="flex-1 w-full relative">
-                            <EChart key={`s-param-${pc.param}-${t.key}`} option={pc.option} />
-                            {pc.total === 0 && (
-                              <div className="absolute inset-0 flex items-center justify-center text-[9px] text-ink-3 text-center pointer-events-none">
-                                Tidak ada temuan
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ChartCard>
-                <ChartCard title="Grafik Kondisi Bushing per UPT" className="min-h-[300px] lg:h-72">
+            <div className="flex flex-col gap-8 w-full max-w-6xl pb-16">
+              
+              {/* Row 1: KPI overview */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                <ChartCard title="Sebaran Jenis Bushing per UPT" className="min-h-[300px] lg:h-[22rem]">
                   {stats.total === 0 ? (
                     <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
                   ) : (
-                    <EChart key={`s-upt-${t.key}`} option={uptChartOption} />
+                    <EChart key={`s-upt-pie-${t.key}`} option={uptTotalChartOption} />
+                  )}
+                </ChartCard>
+                <ChartCard title="Klasifikasi Usia Bushing" className="min-h-[300px] lg:h-[22rem]">
+                  {stats.total === 0 ? (
+                    <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
+                  ) : (
+                    <EChart key={`s-usia-${t.key}`} option={usiaChartOption} />
                   )}
                 </ChartCard>
               </div>
-              <div className="flex flex-col gap-6">
-                <ChartCard title="Jumlah Berdasarkan Jenis Bushing" className="min-h-[300px] lg:h-72">
-                  {stats.total === 0 ? (
-                    <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
-                  ) : (
-                    <EChart key={`s-jenis-${t.key}`} option={jenisChartOption} />
-                  )}
-                </ChartCard>
-                <ChartCard title="Jumlah Berdasarkan Merk Bushing" className="min-h-[300px] lg:h-72">
-                  {stats.total === 0 ? (
-                    <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
-                  ) : (
-                    <EChart key={`s-merk-${t.key}`} option={merkChartOption} />
-                  )}
-                </ChartCard>
-              </div>
-            </div>
-          </DeckCover>
-        ),
-      },
-      {
-        key: "priority",
-        label: "Tindak Lanjut",
-        node: (
-          <DeckCover
-            eyebrow="Fokus Penanganan"
-            title="Daftar Temuan Prioritas (OPEN)"
-            description="Bushing yang memerlukan investigasi perbaikan, monitoring online, atau thermography berkala."
-            stats={[]}
-          >
-            <ChartCard title="Butuh Tindak Lanjut" badge={`${priorityList.length} Temuan Teratas`} className="max-w-6xl">
-              <div className="max-h-[32rem] overflow-auto scrollbar-thin">
-                <table className="w-full text-[12px]">
-                  <thead className="sticky top-0 bg-surface-solid">
-                    <tr className="border-b border-edge text-left text-[10px] uppercase tracking-wider text-ink-3">
-                      <th className="py-2 pr-3">ID</th>
-                      <th className="px-3">UPT</th>
-                      <th className="px-3">Gardu Induk / Bay</th>
-                      <th className="px-3">Parameter Uji Dominan</th>
-                      <th className="px-3">Keterangan</th>
-                      <th className="pl-3 text-right">Kondisi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {priorityList.map((r, i) => (
-                      <tr key={i} className="border-b border-edge/40 transition-colors hover:bg-surface-2">
-                        <td className="num py-2 pr-3 font-medium text-accent">{r.id}</td>
-                        <td className="px-3 whitespace-nowrap">{r.upt.replace(/^UPT /, "")}</td>
-                        <td className="px-3">
-                          <div className="font-bold">{r.garduInduk}</div>
-                          <div className="text-[10px] text-ink-3">{r.bayTrafo}</div>
-                        </td>
-                        <td className="px-3">{r.parameterUji}</td>
-                        <td className="px-3 max-w-sm truncate" title={r.original.keterangan || "-"}>{r.original.keterangan || "-"}</td>
-                        <td className="pl-3 text-right whitespace-nowrap font-bold" style={{ color: conditionColor(r.kondisi) }}>
-                          {r.kondisi.replace(/^\d-/, "")}
-                        </td>
-                      </tr>
-                    ))}
-                    {priorityList.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="p-8 text-center text-ink-3">Tidak ada data temuan dengan status OPEN pada filter saat ini.</td>
-                      </tr>
+
+              {/* Row 2: Analysis */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+                <div className="flex flex-col gap-6">
+                  <ChartCard title="Temuan per Parameter Uji (OIP)" className="min-h-[300px] lg:h-auto lg:min-h-[18rem]">
+                    {stats.total === 0 ? (
+                      <div className="flex h-72 items-center justify-center text-xs text-ink-3">Tidak ada data</div>
+                    ) : (
+                      <div className="flex flex-wrap justify-center gap-2 md:gap-4 p-2 h-full">
+                        {parameterChartOptions.map(pc => (
+                          <div key={pc.param} className="flex flex-col items-center h-56 w-[calc(50%-0.5rem)] md:w-[calc(33.33%-1rem)] min-w-[150px]">
+                            <div className="text-[10px] font-bold text-ink mb-1 text-center h-6 flex items-center justify-center">
+                              {pc.param} ({pc.total})
+                            </div>
+                            <div className="flex-1 w-full relative">
+                              <EChart key={`s-param-${pc.param}-${t.key}`} option={pc.option} />
+                              {pc.total === 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center text-[9px] text-ink-3 text-center pointer-events-none">
+                                  Tidak ada temuan
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  </tbody>
-                </table>
+                  </ChartCard>
+                  <ChartCard title="Grafik Kondisi Bushing per UPT" className="min-h-[300px] lg:h-72">
+                    {stats.total === 0 ? (
+                      <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
+                    ) : (
+                      <EChart key={`s-upt-${t.key}`} option={uptChartOption} />
+                    )}
+                  </ChartCard>
+                </div>
+                <div className="flex flex-col gap-6">
+                  <ChartCard title="Jumlah Berdasarkan Jenis Bushing" className="min-h-[300px] lg:h-72">
+                    {stats.total === 0 ? (
+                      <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
+                    ) : (
+                      <EChart key={`s-jenis-${t.key}`} option={jenisChartOption} />
+                    )}
+                  </ChartCard>
+                  <ChartCard title="Jumlah Berdasarkan Merk Bushing" className="min-h-[300px] lg:h-72">
+                    {stats.total === 0 ? (
+                      <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
+                    ) : (
+                      <EChart key={`s-merk-${t.key}`} option={merkChartOption} />
+                    )}
+                  </ChartCard>
+                </div>
               </div>
-            </ChartCard>
+
+              {/* Row 3: Priority Table */}
+              <ChartCard title="Daftar Temuan Prioritas (OPEN)" badge={`${priorityList.length} Temuan Teratas`} className="max-w-6xl">
+                <div className="max-h-[32rem] overflow-auto scrollbar-thin">
+                  <table className="w-full text-[12px]">
+                    <thead className="sticky top-0 bg-surface-solid z-10">
+                      <tr className="border-b border-edge text-left text-[10px] uppercase tracking-wider text-ink-3">
+                        <th className="py-2 pr-3">ID</th>
+                        <th className="px-3">UPT</th>
+                        <th className="px-3">Gardu Induk / Bay</th>
+                        <th className="px-3">Parameter Uji Dominan</th>
+                        <th className="px-3">Keterangan</th>
+                        <th className="pl-3 text-right">Kondisi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {priorityList.map((r, i) => (
+                        <tr key={i} className="border-b border-edge/40 transition-colors hover:bg-surface-2">
+                          <td className="num py-2 pr-3 font-medium text-accent">{r.id}</td>
+                          <td className="px-3 whitespace-nowrap">{r.upt.replace(/^UPT /, "")}</td>
+                          <td className="px-3">
+                            <div className="font-bold">{r.garduInduk}</div>
+                            <div className="text-[10px] text-ink-3">{r.bayTrafo}</div>
+                          </td>
+                          <td className="px-3">{r.parameterUji}</td>
+                          <td className="px-3 max-w-sm truncate" title={r.original.keterangan || "-"}>{r.original.keterangan || "-"}</td>
+                          <td className="pl-3 text-right whitespace-nowrap font-bold" style={{ color: conditionColor(r.kondisi) }}>
+                            {r.kondisi.replace(/^\d-/, "")}
+                          </td>
+                        </tr>
+                      ))}
+                      {priorityList.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-ink-3">Tidak ada data temuan dengan status OPEN pada filter saat ini.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </ChartCard>
+
+            </div>
           </DeckCover>
         )
       }
     ];
   }, [filteredRecords, stats, t, uptTotalChartOption, uptChartOption, parameterChartOptions, jenisChartOption, merkChartOption]);
 
+  const filterControls = (
+    <>
+      <MultiSelect
+        label="UPT"
+        options={uptOptions}
+        selected={uptFilter}
+        onChange={setUptFilter}
+      />
+      <MultiSelect
+        label="Jenis Bushing"
+        options={jenisBushingOptions}
+        selected={jenisBushingFilter}
+        onChange={setJenisBushingFilter}
+      />
+      <MultiSelect
+        label="Tahun Buat"
+        options={tahunOptions}
+        selected={tahunFilter}
+        onChange={setTahunFilter}
+      />
+      <MultiSelect
+        label="Kondisi"
+        options={kondisiOptions}
+        selected={kondisiFilter}
+        onChange={setKondisiFilter}
+      />
+      <MultiSelect
+        label="Tindak Lanjut"
+        options={statusOptions}
+        selected={statusFilter}
+        onChange={setStatusFilter}
+      />
+    </>
+  );
+
   return (
     <div className="space-y-6">
-      {showDeck && <Deck slides={slides} onExit={() => setShowDeck(false)} />}
+      {showDeck && <Deck slides={slides} onExit={() => setShowDeck(false)} filters={filterControls} />}
       
       {/* 1. FILTER BAR PANEL */}
       <div className="card rise rise-1 relative z-30 p-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-3 flex-1">
-            <MultiSelect
-              label="UPT"
-              options={uptOptions}
-              selected={uptFilter}
-              onChange={setUptFilter}
-            />
-            <MultiSelect
-              label="Jenis Bushing"
-              options={jenisBushingOptions}
-              selected={jenisBushingFilter}
-              onChange={setJenisBushingFilter}
-            />
-            <MultiSelect
-              label="Tahun Buat"
-              options={tahunOptions}
-              selected={tahunFilter}
-              onChange={setTahunFilter}
-            />
-            <MultiSelect
-              label="Kondisi"
-              options={kondisiOptions}
-              selected={kondisiFilter}
-              onChange={setKondisiFilter}
-            />
-            <MultiSelect
-              label="Tindak Lanjut"
-              options={statusOptions}
-              selected={statusFilter}
-              onChange={setStatusFilter}
-            />
+            {filterControls}
           </div>
-
           {/* Search & Reset Button */}
           <div className="flex flex-col gap-1.5 md:w-auto">
             <label className="text-[10px] font-bold uppercase tracking-wider text-ink-3 md:hidden">Pencarian & Aksi</label>
@@ -847,9 +971,9 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                   Tidak ada data untuk filter saat ini.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-2">
+                <div className="flex flex-wrap justify-center gap-2 md:gap-4 p-2">
                   {parameterChartOptions.map(pc => (
-                    <div key={pc.param} className="flex flex-col items-center h-56">
+                    <div key={pc.param} className="flex flex-col items-center h-56 w-[calc(50%-0.5rem)] md:w-[calc(33.33%-1rem)] min-w-[150px]">
                       <div className="text-[11px] font-bold text-ink mb-1 text-center h-8 flex items-center justify-center">
                         {pc.param}
                         <span className="ml-1 text-ink-3">({pc.total})</span>
@@ -868,8 +992,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
               )}
             </ChartCard>
 
-            {/* Chart 6: Kondisi Bushing per UPT */}
-            <ChartCard title="Grafik Kondisi Bushing per UPT" className="h-[300px] md:h-80 col-span-1 md:col-span-2">
+            {/* Chart 6: Kondisi Bushing per Parameter per UPT */}
+            <ChartCard title="Grafik Kondisi Bushing per UPT (Dikelompokkan per Parameter)" className="h-[400px] md:h-[450px] col-span-1 md:col-span-2">
               {stats.total === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-ink-3 text-xs">
                   Tidak ada data untuk filter saat ini.
@@ -878,6 +1002,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                 <EChart key={`upt-${t.key}`} option={uptChartOption} />
               )}
             </ChartCard>
+
           </motion.div>
         ) : (
           <motion.div

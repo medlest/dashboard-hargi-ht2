@@ -69,20 +69,20 @@ export function Deck({
       </div>
 
       {/* Filter & Close Bar (Top) */}
-      <div className="absolute inset-x-0 top-0 z-40 flex items-center justify-between px-8 py-4 pointer-events-none">
-        <div className="pointer-events-auto flex items-center gap-2">
+      <div className="absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-4 px-4 py-4 md:px-8 pointer-events-none">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2 flex-1">
           {filters}
         </div>
         <button 
           type="button" 
           onClick={onExit} 
-          className="pointer-events-auto flex items-center gap-2 rounded-full bg-surface-2/80 px-4 py-2 text-[13px] font-medium text-red-400 backdrop-blur-md transition-colors hover:bg-red-400 hover:text-white"
+          className="pointer-events-auto flex items-center gap-2 rounded-full bg-surface-2/80 px-4 py-2 text-[13px] font-medium text-red-400 backdrop-blur-md transition-colors hover:bg-red-400 hover:text-white shrink-0"
         >
           <X className="h-4 w-4" /> Keluar Presentasi
         </button>
       </div>
 
-      <div className="relative min-h-0 flex-1 pt-12">
+      <div className="relative min-h-0 flex-1 pt-16 md:pt-20">
         <AnimatePresence mode="wait">
           <motion.div
             key={slide}
