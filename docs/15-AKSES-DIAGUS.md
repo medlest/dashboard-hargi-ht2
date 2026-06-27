@@ -127,9 +127,9 @@ PASS: auth.users SELECT ditolak
 PASS: CREATE SCHEMA ditolak
 ```
 
-Supabase Advisor sempat menandai policy SELECT dobel di `hargi_ht2`
-(`ht2_app_write` + `ht2_reader_select`). Sudah dibersihkan: sekarang tiap
-tabel HT-2 memakai satu policy `ht2_diagus_all` saja.
+Supabase Advisor sempat menandai policy SELECT dobel di `hargi_ht2`.
+Sudah dibersihkan: sekarang tiap tabel HT-2 memakai satu policy
+`ht2_diagus_all` saja.
 
 ## Rujukan Resmi
 

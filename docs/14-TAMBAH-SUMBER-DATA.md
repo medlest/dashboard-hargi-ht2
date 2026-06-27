@@ -51,9 +51,10 @@ create policy ht2_diagus_all on hargi_ht2.<nama_tabel>
   for all to ht2_diagus using (true) with check (true);
 ```
 
-> DDL **di-commit ke repo** sebagai file `.sql`, dieksekusinya oleh owner
-> (langkah 6) — role `ht2_diagus` sebenarnya bisa `CREATE` di schema ini, tapi
-> tabel yang ditulis EF harus dibuat owner supaya kepemilikan & grant konsisten.
+> DDL **di-commit ke repo** sebagai file `.sql`, lalu dieksekusi dengan role
+> yang memang mengelola schema HT-2. Untuk kolaborator Diagus, role itu adalah
+> `ht2_diagus`, supaya ownership tabel baru tetap konsisten di schema
+> `hargi_ht2`.
 
 ### 4. Tampilkan di halaman Next — `app/src/`
 - Query tabel baru di `page.tsx` halaman terkait (ingat:

@@ -62,8 +62,6 @@ COMMENT ON COLUMN hargi_ht2.refresh_log.sheet_name_bushing IS 'Judul spreadsheet
 -- Membuat policy RLS agar role ht2_diagus memiliki akses penuh (SELECT, INSERT, UPDATE, DELETE)
 DO $$
 BEGIN
-  DROP POLICY IF EXISTS ht2_app_all ON hargi_ht2.asesment_bushing;
-
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'hargi_ht2' 
