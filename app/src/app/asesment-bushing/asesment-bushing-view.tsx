@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Search, Info, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, LayoutGrid, ExternalLink, Presentation } from "lucide-react";
+import { Search, Info, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, LayoutGrid, Presentation } from "lucide-react";
 import { conditionColor } from "@/lib/colors";
-import { pieOption, groupedBarOption, hbarOption, simpleBarOption, stackedBarOption } from "@/lib/echart-options";
+import { pieOption, hbarOption, groupedBarOption } from "@/lib/echart-options";
 import { ChartCard } from "@/components/chart-card";
 import { EChart, useChartTheme } from "@/components/echart";
 import { MultiSelect } from "@/components/multi-select";
 import { motion, AnimatePresence } from "framer-motion";
-import { Deck, DeckCover, DeckChartSlide, DeckContentSlide, DeckB, deckPct } from "@/components/slide-deck";
+import { Deck, DeckCover, DeckContentSlide } from "@/components/slide-deck";
 
 export interface DBBushingRecord {
   id: number;
@@ -40,7 +40,7 @@ const PARAMS_CONFIG = [
     name: "Level Minyak",
     classes: ["NORMAL", "MEDIUM", "LOW"],
     colors: { "NORMAL": "#10b981", "MEDIUM": "#f59e0b", "LOW": "#ef4444" },
-    getValue: (r: any) => {
+    getValue: (r: { original: DBBushingRecord }) => {
       const v = (r.original.level_minyak || "").trim().toUpperCase();
       if (v === "LOW") return "LOW";
       if (v === "MEDIUM") return "MEDIUM";
@@ -51,7 +51,7 @@ const PARAMS_CONFIG = [
     name: "Hasil Thermovisi",
     classes: ["NORMAL", "HOTSPOT"],
     colors: { "NORMAL": "#10b981", "HOTSPOT": "#ef4444" },
-    getValue: (r: any) => {
+    getValue: (r: { original: DBBushingRecord }) => {
       const v = (r.original.hasil_thermovisi || "").trim().toUpperCase();
       if (v === "HOTSPOT") return "HOTSPOT";
       return "NORMAL";
@@ -59,9 +59,9 @@ const PARAMS_CONFIG = [
   },
   {
     name: "Kondisi Fisik",
-    classes: ["NORMAL", "REMBES", "RETAK"],
-    colors: { "NORMAL": "#10b981", "REMBES": "#f59e0b", "RETAK": "#ef4444" },
-    getValue: (r: any) => {
+    classes: ["NORMAL", "REMBES", "BOCOR", "RETAK", "PECAH", "KOTOR"],
+    colors: { "NORMAL": "#10b981", "REMBES": "#f59e0b", "BOCOR": "#ef4444", "RETAK": "#ef4444", "PECAH": "#ef4444", "KOTOR": "#f59e0b" },
+    getValue: (r: { original: DBBushingRecord }) => {
       const v = (r.original.kondisi_fisik || "").trim().toUpperCase();
       if (v.includes("RETAK")) return "RETAK";
       if (v.includes("REMBES")) return "REMBES";
@@ -72,7 +72,7 @@ const PARAMS_CONFIG = [
     name: "Hasil Uji Tadel",
     classes: ["VERY GOOD", "GOOD", "FAIR", "POOR", "CRITICAL"],
     colors: { "VERY GOOD": "#3b82f6", "GOOD": "#10b981", "FAIR": "#fbbf24", "POOR": "#f87171", "CRITICAL": "#b91c1c" },
-    getValue: (r: any) => {
+    getValue: (r: { original: DBBushingRecord }) => {
       const v = (r.original.hasil_uji_tandel || "").trim().toUpperCase();
       if (v === "CRITICAL") return "CRITICAL";
       if (v === "POOR") return "POOR";
@@ -85,7 +85,7 @@ const PARAMS_CONFIG = [
     name: "Kondisi Center Tap",
     classes: ["NORMAL", "ANOMALI"],
     colors: { "NORMAL": "#10b981", "ANOMALI": "#ef4444" },
-    getValue: (r: any) => {
+    getValue: (r: { original: DBBushingRecord; kondisi: string }) => {
       const ket = (r.original.keterangan || "").trim().toUpperCase();
       if (ket.includes("CENTER TAP") && r.kondisi !== "1-Very Good" && r.kondisi !== "2-Good") return "ANOMALI";
       return "NORMAL";
@@ -279,7 +279,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     let openCount = 0;
 
     filteredRecords.forEach((r) => {
-      let bCount = r.jenisBushing && r.jenisBushing !== "-" ? 1 : 0;
+      const bCount = r.jenisBushing && r.jenisBushing !== "-" ? 1 : 0;
       totalBushings += bCount;
 
       if (r.kondisi === "5-Critical") criticalCount += bCount;
@@ -365,17 +365,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   }, [filteredRecords, t]);
 
   // ECharts: Grafik Anomali Parameter Uji per UPT (Grouped & Stacked dengan Klasifikasi Asli)
-  // ECharts: Sebaran Kondisi Bushing
-  const kondisiChartOption = useMemo(() => {
-    const slices = [
-      { name: "Very Good", value: stats.veryGood, color: "#10b981" },
-      { name: "Good", value: stats.good, color: "#3b82f6" },
-      { name: "Fair", value: stats.fair, color: "#f59e0b" },
-      { name: "Poor", value: stats.poor, color: "#f97316" },
-      { name: "Critical", value: stats.critical, color: "#ef4444" },
-    ].filter(s => s.value > 0);
-    return pieOption(t, slices);
-  }, [stats, t]);
+
 
   // ECharts: Parameter Uji vs Temuan (Pie Charts per Parameter)
   const parameterChartOptions = useMemo(() => {
@@ -399,7 +389,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const slices = pc.classes.map(cls => ({
         name: cls,
         value: countMap[cls],
-        color: (pc.colors as any)[cls]
+        color: (pc.colors as Record<string, string>)[cls]
       }));
 
       return { param: pc.name, option: pieOption(t, slices), total };
@@ -478,7 +468,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   }, [filteredRecords, t]);
 
   // ===== Rincian Data Table =====
-  const rincianTable = (
+  const rincianTable = useMemo(() => (
     <div className="overflow-auto max-h-[400px] w-full scrollbar-thin">
       <table className="w-full text-left text-[11px] whitespace-nowrap">
         <thead className="sticky top-0 bg-surface-solid z-10">
@@ -498,7 +488,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
           </tr>
         </thead>
         <tbody>
-          {filteredRecords.map((r, i) => (
+          {filteredRecords.slice(0, 100).map((r, i) => (
             <tr key={i} className="border-b border-edge/40 hover:bg-surface-2 transition-colors">
               <td className="px-3 py-1.5 font-bold">{r.garduInduk}</td>
               <td className="px-3 py-1.5">{r.bayTrafo}</td>
@@ -519,10 +509,17 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
               <td colSpan={12} className="p-8 text-center text-ink-3">Tidak ada data untuk filter saat ini.</td>
             </tr>
           )}
+          {filteredRecords.length > 100 && (
+            <tr>
+              <td colSpan={12} className="p-3 text-center text-ink-3 text-[10px] italic bg-surface-2/50">
+                Menampilkan 100 dari {filteredRecords.length} data. Gunakan tab &quot;Data Asesment Bushing&quot; untuk melihat seluruh data secara lengkap.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
-  );
+  ), [filteredRecords]);
 
   // ===== Slide Deck Slides =====
   const slides = useMemo(() => {
@@ -662,7 +659,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         )
       }
     ];
-  }, [filteredRecords, stats, t, uptTotalChartOption, kondisiChartOption, parameterChartOptions, jenisChartOption, merkChartOption]);
+  }, [filteredRecords, stats, t, uptTotalChartOption, parameterChartOptions, jenisChartOption, merkChartOption, rincianTable, usiaChartOption]);
 
   const filterControls = (
     <>
