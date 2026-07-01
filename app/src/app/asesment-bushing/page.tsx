@@ -38,7 +38,7 @@ export default async function AsesmentBushingPage() {
       <PageHeader
         title="Monitoring Asesment Bushing"
         subtitle="Sistem Monitoring Hasil Asesment & Kondisi Bushing Trafo · UIT Jawa Bagian Tengah"
-        sourceUrl="https://docs.google.com/spreadsheets/d/1HS08VH-CURCJiqjDqhCd1z1VFWbnykA89IrlJaAm9BA/edit#gid=706438307"
+        sourceUrl="https://docs.google.com/spreadsheets/d/1_bBncuTGo8s687UOP9XuU1ObhmTxDlPFXZzwVqYBs3M/edit?gid=0#gid=0"
         sheetName="Asesment Bushing"
         sheetModified={meta?.synced_at?.split(" · ")[0]}
       />

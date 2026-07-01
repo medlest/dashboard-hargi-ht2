@@ -8,7 +8,7 @@ import Papa from "npm:papaparse@5.5.3";
 const CE_ABO = { id: "1-eC0GdeMwYDhnGzCSM8viO0HvD6X0NdlMaWOxe2P9ZM", gid: "299154811" };
 const PARETO = { id: "1hf_lpXI6x3hBDfEHX8r8q15w6F3wtlzIABGibdpCMhg", gid: "1882488493" };
 const ABO_2026 = { id: "11HQFitHH8xISZvVxuG0rd0q84Y6tOtCi7jO7wDbUeVs", gid: "1761063736" };
-const ASESMENT_BUSHING = { id: "1HS08VH-CURCJiqjDqhCd1z1VFWbnykA89IrlJaAm9BA", gid: "706438307" };
+const ASESMENT_BUSHING = { id: "1_bBncuTGo8s687UOP9XuU1ObhmTxDlPFXZzwVqYBs3M", gid: "0" };
 
 type Row = Record<string, string>;
 

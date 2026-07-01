@@ -14,7 +14,7 @@ async function run() {
   let logId = null;
 
   console.log("Fetching Asesment Bushing data...");
-  const res = await fetch("https://docs.google.com/spreadsheets/d/1HS08VH-CURCJiqjDqhCd1z1VFWbnykA89IrlJaAm9BA/export?format=csv&gid=706438307");
+  const res = await fetch("https://docs.google.com/spreadsheets/d/1_bBncuTGo8s687UOP9XuU1ObhmTxDlPFXZzwVqYBs3M/export?format=csv&gid=0");
   if (!res.ok) throw new Error(`Fetch sheet gagal: HTTP ${res.status}`);
 
   const text = await res.text();

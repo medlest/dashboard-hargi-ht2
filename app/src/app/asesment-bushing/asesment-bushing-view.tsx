@@ -82,9 +82,8 @@ const PARAMS_CONFIG = [
     colors: { "NORMAL": "#10b981", "REMBES": "#f59e0b", "RETAK": "#ef4444" },
     getValue: (r: any) => {
       const v = (r.original.kondisi_fisik || "").trim().toUpperCase();
-      const ket = (r.original.keterangan || "").trim().toUpperCase();
-      if (v.includes("RETAK") || ket.includes("RETAK") || ket.includes("PECAH") || ket.includes("GOMPEL") || ket.includes("CRITICAL")) return "RETAK";
-      if (v.includes("REMBES") || ket.includes("REMBES") || ket.includes("BOCOR")) return "REMBES";
+      if (v.includes("RETAK")) return "RETAK";
+      if (v.includes("REMBES")) return "REMBES";
       return "NORMAL";
     }
   },
@@ -224,9 +223,19 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const mR = (r.merk_primer_r || "-").trim();
       const mS = (r.merk_primer_s || "-").trim();
       const mT = (r.merk_primer_t || "-").trim();
+      
+      const jSR = (r.jenis_bushing_skunder_r || "-").trim();
+      const jSS = (r.jenis_bushing_skunder_s || "-").trim();
+      const jST = (r.jenis_bushing_skunder_t || "-").trim();
+      const mSR = (r.merk_skunder_r || "-").trim();
+      const mSS = (r.merk_skunder_s || "-").trim();
+      const mST = (r.merk_skunder_t || "-").trim();
 
-      const jenisBushing = Array.from(new Set([jR, jS, jT].filter(x => x !== "-"))).join(", ") || "-";
-      const merkBushing = Array.from(new Set([mR, mS, mT].filter(x => x !== "-"))).join(", ") || "-";
+      const jenisList = [jR, jS, jT, jSR, jSS, jST];
+      const merkList = [mR, mS, mT, mSR, mSS, mST];
+
+      const jenisBushing = Array.from(new Set(jenisList.filter(x => x !== "-"))).join(", ") || "-";
+      const merkBushing = Array.from(new Set(merkList.filter(x => x !== "-"))).join(", ") || "-";
 
       return {
         id: `BSH-${String(r.id).padStart(3, "0")}`,
@@ -236,8 +245,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         bayTrafo: r.bay_penghantar,
         fasa: "3 Phase",
         tegangan,
-        jenisBushingList: [jR, jS, jT],
-        merkBushingList: [mR, mS, mT],
+        jenisBushingList: jenisList,
+        merkBushingList: merkList,
         jenisBushing,
         merkBushing,
         tahunBuat: (r.thn_buat || "-").trim(),
