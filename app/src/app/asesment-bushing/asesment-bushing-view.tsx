@@ -12,46 +12,27 @@ import { Deck, DeckCover, DeckChartSlide, DeckContentSlide, DeckB, deckPct } fro
 
 export interface DBBushingRecord {
   id: number;
-  techidentno: string;
+  no: string;
   nama_upt: string;
   gardu_induk: string;
   bay_penghantar: string;
   merk: string;
   tipe: string;
   tgl_oprs: string;
-  usia: string;
   thn_buat: string;
-  jenis_bushing_primer_r: string;
-  merk_primer_r: string;
-  type_primer_r: string;
-  sn_primer_r: string;
-  jenis_bushing_primer_s: string;
-  merk_primer_s: string;
-  type_primer_s: string;
-  sn_primer_s: string;
-  jenis_bushing_primer_t: string;
-  merk_primer_t: string;
-  type_primer_t: string;
-  sn_primer_t: string;
-  jenis_bushing_skunder_r: string;
-  merk_skunder_r: string;
-  type_skunder_r: string;
-  sn_skunder_r: string;
-  jenis_bushing_skunder_s: string;
-  merk_skunder_s: string;
-  type_skunder_s: string;
-  sn_skunder_s: string;
-  jenis_bushing_skunder_t: string;
-  merk_skunder_t: string;
-  type_skunder_t: string;
-  sn_skunder_t: string;
-  overall: string;
+  usia: string;
+  fasa: string;
+  merk_bushing: string;
+  type_bushing: string;
+  no_seri: string;
+  jenis_bushing: string;
   level_minyak: string;
   hasil_thermovisi: string;
   kondisi_fisik: string;
+  nilai_tadel: string;
+  hasil_uji_tandel: string;
+  kondisi_center_tap: string;
   keterangan: string;
-  link_evidence: string;
-  hasil_uji_tandel?: string;
 }
 
 const PARAMS_CONFIG = [
@@ -120,7 +101,11 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   const [jenisBushingFilter, setJenisBushingFilter] = useState<string[]>([]);
   const [tahunFilter, setTahunFilter] = useState<string[]>([]);
   const [kondisiFilter, setKondisiFilter] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [levelMinyakFilter, setLevelMinyakFilter] = useState<string[]>([]);
+  const [thermovisiFilter, setThermovisiFilter] = useState<string[]>([]);
+  const [kondisiFisikFilter, setKondisiFisikFilter] = useState<string[]>([]);
+  const [nilaiTadelFilter, setNilaiTadelFilter] = useState<string[]>([]);
+  const [centerTapFilter, setCenterTapFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showDeck, setShowDeck] = useState(false);
   
@@ -217,25 +202,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const bayUpper = r.bay_penghantar.toUpperCase();
       if (bayUpper.includes("500KV") || bayUpper.includes("500 KV")) tegangan = "500 kV";
 
-      const jR = (r.jenis_bushing_primer_r || "-").trim();
-      const jS = (r.jenis_bushing_primer_s || "-").trim();
-      const jT = (r.jenis_bushing_primer_t || "-").trim();
-      const mR = (r.merk_primer_r || "-").trim();
-      const mS = (r.merk_primer_s || "-").trim();
-      const mT = (r.merk_primer_t || "-").trim();
-      
-      const jSR = (r.jenis_bushing_skunder_r || "-").trim();
-      const jSS = (r.jenis_bushing_skunder_s || "-").trim();
-      const jST = (r.jenis_bushing_skunder_t || "-").trim();
-      const mSR = (r.merk_skunder_r || "-").trim();
-      const mSS = (r.merk_skunder_s || "-").trim();
-      const mST = (r.merk_skunder_t || "-").trim();
-
-      const jenisList = [jR, jS, jT, jSR, jSS, jST];
-      const merkList = [mR, mS, mT, mSR, mSS, mST];
-
-      const jenisBushing = Array.from(new Set(jenisList.filter(x => x !== "-"))).join(", ") || "-";
-      const merkBushing = Array.from(new Set(merkList.filter(x => x !== "-"))).join(", ") || "-";
+      const jenisBushing = (r.jenis_bushing || "-").trim();
+      const merkBushing = (r.merk_bushing || "-").trim();
 
       return {
         id: `BSH-${String(r.id).padStart(3, "0")}`,
@@ -243,10 +211,10 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         upt: r.nama_upt,
         garduInduk: r.gardu_induk,
         bayTrafo: r.bay_penghantar,
-        fasa: "3 Phase",
+        fasa: (r.fasa || "-").trim(),
         tegangan,
-        jenisBushingList: jenisList,
-        merkBushingList: merkList,
+        jenisBushingList: jenisBushing !== "-" ? [jenisBushing] : [],
+        merkBushingList: merkBushing !== "-" ? [merkBushing] : [],
         jenisBushing,
         merkBushing,
         tahunBuat: (r.thn_buat || "-").trim(),
@@ -268,7 +236,12 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   }, [records]);
   const tahunOptions = useMemo(() => Array.from(new Set(records.map(r => r.tahunBuat))).sort(), [records]);
   const kondisiOptions = ["Very Good", "Good", "Fair", "Poor", "Critical"];
-  const statusOptions = ["Open", "Close"];
+  
+  const levelMinyakOptions = useMemo(() => Array.from(new Set(records.map(r => (r.original.level_minyak || "").trim()).filter(x => x && x !== "-"))).sort(), [records]);
+  const thermovisiOptions = useMemo(() => Array.from(new Set(records.map(r => (r.original.hasil_thermovisi || "").trim()).filter(x => x && x !== "-"))).sort(), [records]);
+  const kondisiFisikOptions = useMemo(() => Array.from(new Set(records.map(r => (r.original.kondisi_fisik || "").trim()).filter(x => x && x !== "-"))).sort(), [records]);
+  const nilaiTadelOptions = useMemo(() => Array.from(new Set(records.map(r => (r.original.nilai_tadel || "").trim()).filter(x => x && x !== "-"))).sort(), [records]);
+  const centerTapOptions = useMemo(() => Array.from(new Set(records.map(r => (r.original.kondisi_center_tap || "").trim()).filter(x => x && x !== "-"))).sort(), [records]);
 
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
@@ -276,7 +249,12 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const matchJenis = jenisBushingFilter.length === 0 || jenisBushingFilter.some(f => r.jenisBushingList.includes(f));
       const matchTahun = tahunFilter.length === 0 || tahunFilter.includes(r.tahunBuat);
       const matchKondisi = kondisiFilter.length === 0 || kondisiFilter.includes(r.kondisi.replace(/^\d-/, ""));
-      const matchStatus = statusFilter.length === 0 || statusFilter.includes(r.statusTindakLanjut);
+      
+      const matchLevelMinyak = levelMinyakFilter.length === 0 || levelMinyakFilter.includes((r.original.level_minyak || "").trim());
+      const matchThermovisi = thermovisiFilter.length === 0 || thermovisiFilter.includes((r.original.hasil_thermovisi || "").trim());
+      const matchKondisiFisik = kondisiFisikFilter.length === 0 || kondisiFisikFilter.includes((r.original.kondisi_fisik || "").trim());
+      const matchNilaiTadel = nilaiTadelFilter.length === 0 || nilaiTadelFilter.includes((r.original.nilai_tadel || "").trim());
+      const matchCenterTap = centerTapFilter.length === 0 || centerTapFilter.includes((r.original.kondisi_center_tap || "").trim());
       
       const searchLower = searchQuery.toLowerCase();
       const matchSearch = searchQuery === "" || 
@@ -285,9 +263,9 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         r.id.toLowerCase().includes(searchLower) ||
         r.parameterUji.toLowerCase().includes(searchLower);
 
-      return matchUpt && matchJenis && matchTahun && matchKondisi && matchStatus && matchSearch;
+      return matchUpt && matchJenis && matchTahun && matchKondisi && matchLevelMinyak && matchThermovisi && matchKondisiFisik && matchNilaiTadel && matchCenterTap && matchSearch;
     });
-  }, [records, uptFilter, jenisBushingFilter, tahunFilter, kondisiFilter, statusFilter, searchQuery]);
+  }, [records, uptFilter, jenisBushingFilter, tahunFilter, kondisiFilter, levelMinyakFilter, thermovisiFilter, kondisiFisikFilter, nilaiTadelFilter, centerTapFilter, searchQuery]);
 
   // Aggregate Stats
   const stats = useMemo(() => {
@@ -301,10 +279,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     let openCount = 0;
 
     filteredRecords.forEach((r) => {
-      let bCount = 0;
-      r.jenisBushingList.forEach(b => {
-        if (b && b !== "-") bCount++;
-      });
+      let bCount = r.jenisBushing && r.jenisBushing !== "-" ? 1 : 0;
       totalBushings += bCount;
 
       if (r.kondisi === "5-Critical") criticalCount += bCount;
@@ -339,7 +314,11 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     setJenisBushingFilter([]);
     setTahunFilter([]);
     setKondisiFilter([]);
-    setStatusFilter([]);
+    setLevelMinyakFilter([]);
+    setThermovisiFilter([]);
+    setKondisiFisikFilter([]);
+    setNilaiTadelFilter([]);
+    setCenterTapFilter([]);
     setSearchQuery("");
   };
 
@@ -386,132 +365,17 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
   }, [filteredRecords, t]);
 
   // ECharts: Grafik Anomali Parameter Uji per UPT (Grouped & Stacked dengan Klasifikasi Asli)
-  const uptChartOption = useMemo(() => {
-    const upts = Array.from(new Set(filteredRecords.map(r => r.upt))).sort();
-    
-    const dataMap: Record<string, Record<string, Record<string, number>>> = {};
-    const totalMap: Record<string, Record<string, number>> = {};
-    const allLegendItems = new Set<string>();
-
-    upts.forEach(u => {
-      dataMap[u] = {};
-      PARAMS_CONFIG.forEach(pc => {
-        dataMap[u][pc.name] = {};
-        pc.classes.forEach(cls => {
-          dataMap[u][pc.name][cls] = 0;
-          allLegendItems.add(cls);
-        });
-        if (!totalMap[pc.name]) totalMap[pc.name] = {};
-        totalMap[pc.name][u] = 0;
-      });
-    });
-
-    filteredRecords.forEach(r => {
-      const u = r.upt;
-      const bCount = r.jenisBushingList.filter(b => b && b.trim().toUpperCase() === "OIP").length;
-      if (bCount === 0) return;
-
-      PARAMS_CONFIG.forEach(pc => {
-        const cls = pc.getValue(r);
-        if (dataMap[u][pc.name][cls] !== undefined) {
-          dataMap[u][pc.name][cls] += bCount;
-        }
-        totalMap[pc.name][u] += bCount;
-      });
-    });
-
-    const series: any[] = [];
-    
-    // Buat stacked bar untuk setiap kelas di setiap parameter
-    PARAMS_CONFIG.forEach(pc => {
-      pc.classes.forEach(cls => {
-        series.push({
-          name: cls,
-          type: "bar",
-          stack: pc.name,
-          data: upts.map(u => dataMap[u][pc.name][cls]),
-          itemStyle: { color: (pc.colors as any)[cls] },
-          label: {
-            show: true,
-            color: "#fff",
-            fontSize: 10,
-            fontWeight: "bold",
-            formatter: (param: any) => param.value > 0 ? param.value : ""
-          }
-        });
-      });
-    });
-
-    // Tambahkan bar transparan di ujung stack untuk memunculkan label total
-    PARAMS_CONFIG.forEach(pc => {
-      series.push({
-        name: "Total " + pc.name,
-        type: "bar",
-        stack: pc.name,
-        data: upts.map(() => 0), // 0 agar ada di posisi teratas stack
-        itemStyle: { color: "transparent" },
-        tooltip: { show: false },
-        label: {
-          show: true,
-          position: "top",
-          color: t.tickStrong,
-          fontSize: 9,
-          fontWeight: "bold",
-          rotate: 90,
-          align: 'left',
-          verticalAlign: 'middle',
-          distance: 5,
-          formatter: (param: any) => {
-            const sum = totalMap[pc.name][upts[param.dataIndex]];
-            return sum > 0 ? `${pc.name} (${sum})` : "";
-          }
-        }
-      });
-    });
-
-    // xAxis category formatting
-    const xAxisData = upts.map(u => u.replace("UPT ", ""));
-
-    return {
-      tooltip: { 
-        trigger: "axis" as const, 
-        axisPointer: { type: "shadow" as const },
-        // Custom formatter to only show non-zero and group by parameter conceptually
-        formatter: (paramsPayload: any) => {
-          const paramsArray = Array.isArray(paramsPayload) ? paramsPayload : [paramsPayload];
-          const valid = paramsArray.filter(pa => pa.value > 0);
-          if (valid.length === 0) return "";
-          const pName = valid[0].name;
-          let html = `<b>${pName}</b><br/>`;
-          valid.forEach(v => {
-             // seriesId has format "seriesName\0stackName" internally in echarts, but we can just use seriesName and stack (which is the parameter)
-             html += `${v.marker} ${v.seriesName} (${v.seriesId.split('\\0')[1] || v.seriesId}): <b>${v.value}</b><br/>`;
-          });
-          return html;
-        }
-      },
-      legend: {
-        data: Array.from(allLegendItems),
-        bottom: 0,
-        type: "scroll",
-        textStyle: { color: t.tick, fontSize: 11 }
-      },
-      grid: { left: 8, right: 16, top: 120, bottom: 34, containLabel: true },
-      xAxis: {
-        type: "category" as const,
-        data: xAxisData,
-        axisLabel: { color: t.tick, fontSize: 12, interval: 0, rotate: 35 },
-        axisLine: { lineStyle: { color: t.grid } },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: "value" as const,
-        axisLabel: { color: t.tick, fontSize: 12 },
-        splitLine: { lineStyle: { color: t.grid } },
-      },
-      series: series
-    };
-  }, [filteredRecords, t]);
+  // ECharts: Sebaran Kondisi Bushing
+  const kondisiChartOption = useMemo(() => {
+    const slices = [
+      { name: "Very Good", value: stats.veryGood, color: "#10b981" },
+      { name: "Good", value: stats.good, color: "#3b82f6" },
+      { name: "Fair", value: stats.fair, color: "#f59e0b" },
+      { name: "Poor", value: stats.poor, color: "#f97316" },
+      { name: "Critical", value: stats.critical, color: "#ef4444" },
+    ].filter(s => s.value > 0);
+    return pieOption(t, slices);
+  }, [stats, t]);
 
   // ECharts: Parameter Uji vs Temuan (Pie Charts per Parameter)
   const parameterChartOptions = useMemo(() => {
@@ -613,6 +477,52 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
     return pieOption(t, slices);
   }, [filteredRecords, t]);
 
+  // ===== Rincian Data Table =====
+  const rincianTable = (
+    <div className="overflow-auto max-h-[400px] w-full scrollbar-thin">
+      <table className="w-full text-left text-[11px] whitespace-nowrap">
+        <thead className="sticky top-0 bg-surface-solid z-10">
+          <tr className="border-b border-edge font-bold text-ink-3 uppercase tracking-wider">
+            <th className="px-3 py-2">Gardu Induk</th>
+            <th className="px-3 py-2">Bay</th>
+            <th className="px-3 py-2">Thn Buat</th>
+            <th className="px-3 py-2">Fasa</th>
+            <th className="px-3 py-2">Merk Bushing</th>
+            <th className="px-3 py-2">Jenis Bushing</th>
+            <th className="px-3 py-2">Level Minyak</th>
+            <th className="px-3 py-2">Thermovisi</th>
+            <th className="px-3 py-2">Kondisi Fisik</th>
+            <th className="px-3 py-2">Nilai Tadel</th>
+            <th className="px-3 py-2">Center Tap</th>
+            <th className="px-3 py-2 max-w-xs">Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredRecords.map((r, i) => (
+            <tr key={i} className="border-b border-edge/40 hover:bg-surface-2 transition-colors">
+              <td className="px-3 py-1.5 font-bold">{r.garduInduk}</td>
+              <td className="px-3 py-1.5">{r.bayTrafo}</td>
+              <td className="px-3 py-1.5">{r.original.thn_buat || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.fasa || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.merk_bushing || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.jenis_bushing || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.level_minyak || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.hasil_thermovisi || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.kondisi_fisik || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.nilai_tadel || "-"}</td>
+              <td className="px-3 py-1.5">{r.original.kondisi_center_tap || "-"}</td>
+              <td className="px-3 py-1.5 max-w-xs truncate" title={r.original.keterangan || "-"}>{r.original.keterangan || "-"}</td>
+            </tr>
+          ))}
+          {filteredRecords.length === 0 && (
+            <tr>
+              <td colSpan={12} className="p-8 text-center text-ink-3">Tidak ada data untuk filter saat ini.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 
   // ===== Slide Deck Slides =====
   const slides = useMemo(() => {
@@ -683,12 +593,10 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                       </div>
                     )}
                   </ChartCard>
-                  <ChartCard title="Grafik Kondisi Bushing per UPT" className="min-h-[300px] lg:h-72">
-                    {stats.total === 0 ? (
-                      <div className="flex h-full items-center justify-center text-xs text-ink-3">Tidak ada data</div>
-                    ) : (
-                      <EChart key={`s-upt-${t.key}`} option={uptChartOption} />
-                    )}
+                  <ChartCard title="Rincian Data Rekap Asesment Bushing" className="min-h-[300px] lg:h-72 flex flex-col">
+                    <div className="flex-1 w-full relative">
+                      {rincianTable}
+                    </div>
                   </ChartCard>
                 </div>
                 <div className="flex flex-col gap-6">
@@ -754,7 +662,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         )
       }
     ];
-  }, [filteredRecords, stats, t, uptTotalChartOption, uptChartOption, parameterChartOptions, jenisChartOption, merkChartOption]);
+  }, [filteredRecords, stats, t, uptTotalChartOption, kondisiChartOption, parameterChartOptions, jenisChartOption, merkChartOption]);
 
   const filterControls = (
     <>
@@ -783,10 +691,34 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         onChange={setKondisiFilter}
       />
       <MultiSelect
-        label="Tindak Lanjut"
-        options={statusOptions}
-        selected={statusFilter}
-        onChange={setStatusFilter}
+        label="Level Minyak"
+        options={levelMinyakOptions}
+        selected={levelMinyakFilter}
+        onChange={setLevelMinyakFilter}
+      />
+      <MultiSelect
+        label="Thermovisi"
+        options={thermovisiOptions}
+        selected={thermovisiFilter}
+        onChange={setThermovisiFilter}
+      />
+      <MultiSelect
+        label="Kondisi Fisik"
+        options={kondisiFisikOptions}
+        selected={kondisiFisikFilter}
+        onChange={setKondisiFisikFilter}
+      />
+      <MultiSelect
+        label="Nilai Tadel"
+        options={nilaiTadelOptions}
+        selected={nilaiTadelFilter}
+        onChange={setNilaiTadelFilter}
+      />
+      <MultiSelect
+        label="Center Tap"
+        options={centerTapOptions}
+        selected={centerTapFilter}
+        onChange={setCenterTapFilter}
       />
     </>
   );
@@ -1001,15 +933,11 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
               )}
             </ChartCard>
 
-            {/* Chart 6: Kondisi Bushing per Parameter per UPT */}
-            <ChartCard title="Grafik Kondisi Bushing per UPT (Dikelompokkan per Parameter)" className="h-[400px] md:h-[450px] col-span-1 md:col-span-2">
-              {stats.total === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-ink-3 text-xs">
-                  Tidak ada data untuk filter saat ini.
-                </div>
-              ) : (
-                <EChart key={`upt-${t.key}`} option={uptChartOption} />
-              )}
+            {/* Chart 6: Rincian Data Table */}
+            <ChartCard title="Rincian Data Rekap Asesment Bushing" className="h-[400px] md:h-[450px] col-span-1 md:col-span-2 flex flex-col">
+              <div className="flex-1 w-full relative">
+                {rincianTable}
+              </div>
             </ChartCard>
 
           </motion.div>
@@ -1107,17 +1035,12 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                                       </div>
                                       
                                       <div className="space-y-1">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-ink-3">Bushing Primer (HV)</span>
-                                        <div className="text-[11px]">Ph R: <span className="font-semibold text-ink-2">{r.original.jenis_bushing_primer_r || "-"} ({r.original.merk_primer_r || "-"})</span></div>
-                                        <div className="text-[11px]">Ph S: <span className="font-semibold text-ink-2">{r.original.jenis_bushing_primer_s || "-"} ({r.original.merk_primer_s || "-"})</span></div>
-                                        <div className="text-[11px]">Ph T: <span className="font-semibold text-ink-2">{r.original.jenis_bushing_primer_t || "-"} ({r.original.merk_primer_t || "-"})</span></div>
-                                      </div>
-
-                                      <div className="space-y-1">
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-ink-3">Bushing Sekunder (LV)</span>
-                                        <div className="text-[11px]">Ph R: <span className="font-semibold text-ink-2">{r.original.jenis_bushing_skunder_r || "-"} ({r.original.merk_skunder_r || "-"})</span></div>
-                                        <div className="text-[11px]">Ph S: <span className="font-semibold text-ink-2">{r.original.jenis_bushing_skunder_s || "-"} ({r.original.merk_skunder_s || "-"})</span></div>
-                                        <div className="text-[11px]">Ph T: <span className="font-semibold text-ink-2">{r.original.jenis_bushing_skunder_t || "-"} ({r.original.merk_skunder_t || "-"})</span></div>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-ink-3">Detail Bushing</span>
+                                        <div className="text-[11px]">Fasa: <span className="font-semibold text-ink-2">{r.original.fasa || "-"}</span></div>
+                                        <div className="text-[11px]">Jenis Bushing: <span className="font-semibold text-ink-2">{r.original.jenis_bushing || "-"}</span></div>
+                                        <div className="text-[11px]">Merk: <span className="font-semibold text-ink-2">{r.original.merk_bushing || "-"}</span></div>
+                                        <div className="text-[11px]">Type: <span className="font-semibold text-ink-2">{r.original.type_bushing || "-"}</span></div>
+                                        <div className="text-[11px]">No Seri: <span className="font-semibold text-ink-2">{r.original.no_seri || "-"}</span></div>
                                       </div>
 
                                       <div className="space-y-1">
@@ -1125,6 +1048,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                                         <div className="text-[11px]">Level Minyak: <span className="font-semibold">{r.original.level_minyak || "-"}</span></div>
                                         <div className="text-[11px]">Thermovisi: <span className="font-semibold">{r.original.hasil_thermovisi || "-"}</span></div>
                                         <div className="text-[11px]">Kondisi Fisik: <span className="font-semibold">{r.original.kondisi_fisik || "-"}</span></div>
+                                        <div className="text-[11px]">Nilai Tadel: <span className="font-semibold">{r.original.nilai_tadel || "-"}</span></div>
                                       </div>
                                     </div>
 
@@ -1143,17 +1067,6 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
                                             {r.statusTindakLanjut === "Open" ? "Lakukan investigasi perbaikan, monitoring online, dan thermography berkala." : "Lanjutkan pemantauan rutin 2 bulanan."}
                                           </span>
                                         </div>
-
-                                        {r.original.link_evidence && r.original.link_evidence.startsWith("http") && (
-                                          <a 
-                                            href={r.original.link_evidence} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 rounded bg-accent-soft px-2.5 py-1 text-[10px] font-bold text-accent hover:bg-accent hover:text-white transition-colors"
-                                          >
-                                            Evidence Foto <ExternalLink className="h-3 w-3" />
-                                          </a>
-                                        )}
                                       </div>
                                     </div>
                                   </div>

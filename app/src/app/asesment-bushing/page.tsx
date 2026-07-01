@@ -14,14 +14,10 @@ export default async function AsesmentBushingPage() {
   const [row] = (await sql`
     select 
       (select coalesce(jsonb_agg(x order by x.id), '[]'::jsonb) from (
-         select id, techidentno, nama_upt, gardu_induk, bay_penghantar, merk, tipe, tgl_oprs, usia, thn_buat,
-                jenis_bushing_primer_r, merk_primer_r, type_primer_r, sn_primer_r,
-                jenis_bushing_primer_s, merk_primer_s, type_primer_s, sn_primer_s,
-                jenis_bushing_primer_t, merk_primer_t, type_primer_t, sn_primer_t,
-                jenis_bushing_skunder_r, merk_skunder_r, type_skunder_r, sn_skunder_r,
-                jenis_bushing_skunder_s, merk_skunder_s, type_skunder_s, sn_skunder_s,
-                jenis_bushing_skunder_t, merk_skunder_t, type_skunder_t, sn_skunder_t,
-                overall, level_minyak, hasil_thermovisi, kondisi_fisik, keterangan, link_evidence, hasil_uji_tandel
+         select id, no, nama_upt, gardu_induk, bay_penghantar, merk, tipe, tgl_oprs,
+                thn_buat, usia, fasa, merk_bushing, type_bushing, no_seri, jenis_bushing,
+                level_minyak, hasil_thermovisi, kondisi_fisik, nilai_tadel, hasil_uji_tandel,
+                kondisi_center_tap, keterangan
          from hargi_ht2.asesment_bushing
       ) x) as rows,
       (select to_jsonb(m) from (

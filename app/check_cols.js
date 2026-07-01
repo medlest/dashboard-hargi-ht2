@@ -1,0 +1,7 @@
+const postgres = require('postgres');
+require('dotenv').config({ path: '.env.local' });
+const sql = postgres(process.env.DB_URL);
+sql`select column_name from information_schema.columns where table_schema='hargi_ht2' and table_name='asesment_bushing'`.then(r => { 
+  console.log(r.map(c=>c.column_name)); 
+  process.exit(0); 
+});

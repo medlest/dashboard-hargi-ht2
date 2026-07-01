@@ -206,58 +206,38 @@ function mapAbo2026(rows: Row[]) {
 }
 
 function mapAsesmentBushing(rows: string[][]) {
-  if (rows.length <= 2) return [];
-  // Baris ke-0: merged header group, Baris ke-1: column headers, Baris ke-2+: data
-  const dataRows = rows.slice(2);
+  if (rows.length <= 1) return [];
+  // Baris ke-0: column headers, Baris ke-1+: data
+  const dataRows = rows.slice(1);
   return dataRows
-    .filter((r) => r.length >= 35 && clean(r[1]) !== "" && clean(r[1]).toUpperCase() !== "NAMAUPT")
+    .filter((r) => r.length >= 21 && clean(r[1]) !== "" && clean(r[1]).toUpperCase() !== "NAMAUPT")
     .map((r) => {
       const rawObj: Record<string, string> = {};
       r.forEach((val, idx) => {
         rawObj[`col_${idx}`] = clean(val);
       });
       return {
-        techidentno: clean(r[0]),
+        no: clean(r[0]),
         nama_upt: clean(r[1]),
         gardu_induk: clean(r[2]),
         bay_penghantar: clean(r[3]),
         merk: clean(r[4]),
         tipe: clean(r[5]),
         tgl_oprs: clean(r[6]),
-        usia: clean(r[7]),
-        thn_buat: clean(r[8]),
-        jenis_bushing_primer_r: clean(r[9]),
-        merk_primer_r: clean(r[10]),
-        type_primer_r: clean(r[11]),
-        sn_primer_r: clean(r[12]),
-        jenis_bushing_primer_s: clean(r[13]),
-        merk_primer_s: clean(r[14]),
-        type_primer_s: clean(r[15]),
-        sn_primer_s: clean(r[16]),
-        jenis_bushing_primer_t: clean(r[17]),
-        merk_primer_t: clean(r[18]),
-        type_primer_t: clean(r[19]),
-        sn_primer_t: clean(r[20]),
-        jenis_bushing_skunder_r: clean(r[21]),
-        merk_skunder_r: clean(r[22]),
-        type_skunder_r: clean(r[23]),
-        sn_skunder_r: clean(r[24]),
-        jenis_bushing_skunder_s: clean(r[25]),
-        merk_skunder_s: clean(r[26]),
-        type_skunder_s: clean(r[27]),
-        sn_skunder_s: clean(r[28]),
-        jenis_bushing_skunder_t: clean(r[29]),
-        merk_skunder_t: clean(r[30]),
-        type_skunder_t: clean(r[31]),
-        sn_skunder_t: clean(r[32]),
-        overall: clean(r[33]),
-        level_minyak: clean(r[34]),
-        hasil_thermovisi: clean(r[35]),
-        kondisi_fisik: clean(r[36]),
-        hasil_uji_tandel: clean(r[37]),
-        kondisi_center_tap: clean(r[38]),
-        keterangan: clean(r[39]),
-        link_evidence: clean(r[40]),
+        thn_buat: clean(r[7]),
+        usia: clean(r[8]),
+        fasa: clean(r[9]),
+        merk_bushing: clean(r[10]),
+        type_bushing: clean(r[11]),
+        no_seri: clean(r[12]),
+        jenis_bushing: clean(r[13]),
+        level_minyak: clean(r[14]),
+        hasil_thermovisi: clean(r[15]),
+        kondisi_fisik: clean(r[16]),
+        nilai_tadel: clean(r[17]),
+        hasil_uji_tandel: clean(r[18]),
+        kondisi_center_tap: clean(r[19]),
+        keterangan: clean(r[20]),
         raw: rawObj,
       };
     });
