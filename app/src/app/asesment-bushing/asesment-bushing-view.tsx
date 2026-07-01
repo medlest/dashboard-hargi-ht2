@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Search, Info, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, LayoutGrid, Presentation } from "lucide-react";
+import { Search, Info, CheckCircle2, AlertTriangle, AlertCircle, FileSpreadsheet, LayoutGrid, Presentation, Database } from "lucide-react";
 import { conditionColor } from "@/lib/colors";
 import { pieOption, hbarOption, groupedBarOption } from "@/lib/echart-options";
 import { ChartCard } from "@/components/chart-card";
@@ -293,6 +293,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
 
     const healthyCount = goodCount + veryGoodCount;
     const healthIndex = totalBushings > 0 ? Math.round((healthyCount / totalBushings) * 100) : 100;
+    const dataCompleteness = total > 0 ? Math.round((totalBushings / total) * 100) : 0;
 
     return {
       total,
@@ -304,7 +305,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       veryGood: veryGoodCount,
       criticalPoor: criticalCount + poorCount,
       open: openCount,
-      healthIndex
+      healthIndex,
+      dataCompleteness
     };
   }, [filteredRecords]);
 
@@ -762,8 +764,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         </div>
       </div>
 
-      {/* 2. KPI STRIP (4 Cards) */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* 2. KPI STRIP (5 Cards) */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {/* Card 1: Total Asesment */}
         <div className="card rise rise-2 p-5 flex flex-col justify-between min-h-28 relative overflow-hidden group">
           <div className="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform duration-300">
@@ -818,6 +820,26 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             <div 
               className="h-full bg-emerald-500 transition-all duration-500" 
               style={{ width: `${stats.healthIndex}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Card 5: Kelengkapan Data */}
+        <div className="card rise rise-6 p-5 flex flex-col justify-between min-h-28 relative overflow-hidden group">
+          <div className="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform duration-300">
+            <Database className="h-12 w-12 text-blue-500" />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">Kelengkapan Data</span>
+          <div className="flex items-baseline gap-2 mt-2">
+            <span className="num text-4xl font-extrabold tracking-tight text-blue-500">{stats.dataCompleteness}%</span>
+          </div>
+          <div className="text-[10px] text-ink-3 mt-1">
+            <span className="num font-bold text-ink">{stats.totalBushings}</span> terisi dari <span className="num font-bold text-ink">{stats.total}</span> total data
+          </div>
+          <div className="h-1.5 w-full bg-surface-2 rounded-full mt-2 overflow-hidden">
+            <div 
+              className="h-full bg-blue-500 transition-all duration-500" 
+              style={{ width: `${stats.dataCompleteness}%` }}
             />
           </div>
         </div>
