@@ -86,8 +86,8 @@ const PARAMS_CONFIG = [
     classes: ["NORMAL", "ANOMALI"],
     colors: { "NORMAL": "#10b981", "ANOMALI": "#ef4444" },
     getValue: (r: { original: DBBushingRecord; kondisi: string }) => {
-      const ket = (r.original.keterangan || "").trim().toUpperCase();
-      if (ket.includes("CENTER TAP") && r.kondisi !== "1-Very Good" && r.kondisi !== "2-Good") return "ANOMALI";
+      const val = (r.original.kondisi_center_tap || "").trim().toUpperCase();
+      if (val === "ANOMALI") return "ANOMALI";
       return "NORMAL";
     }
   }
@@ -125,20 +125,19 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
 
       // Tentukan parameter uji utama (ambil tadelVal di awal untuk penentuan kondisi)
       const tadelVal = (r.hasil_uji_tandel || "").trim().toUpperCase();
+      const centerTap = (r.kondisi_center_tap || "").trim().toUpperCase();
 
       // Tentukan kondisi berdasarkan level minyak, thermovisi, kondisi fisik, dan hasil tandel
       let score = 2; // Default 2-Good
       if (tadelVal === "VERY GOOD") score = 1;
 
-      if (lvl === "MEDIUM") score = Math.max(score, 3);
-      if (lvl === "LOW") score = Math.max(score, 4);
-      
-      if (fisik === "REMBES") score = Math.max(score, 3);
-
+      // Anomali -> Critical & Poor (Score >= 4)
+      if (lvl === "MEDIUM" || lvl === "LOW") score = Math.max(score, 4);
       if (thermo === "HOTSPOT") score = Math.max(score, 4);
+      if (fisik === "REMBES" || fisik === "RETAK") score = Math.max(score, 4);
+      if (tadelVal === "FAIR" || tadelVal === "POOR" || tadelVal === "CRITICAL") score = Math.max(score, 4);
+      if (centerTap === "ANOMALI") score = Math.max(score, 4);
 
-      if (tadelVal === "FAIR") score = Math.max(score, 3);
-      if (tadelVal === "POOR") score = Math.max(score, 4);
       if (tadelVal === "CRITICAL") score = Math.max(score, 5);
 
       if (
@@ -148,8 +147,8 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
         ket.includes("critical")
       ) {
         score = Math.max(score, 5);
-      } else if (ket.includes("bocor") || ket.includes("rembes") || ket.includes("low")) {
-        score = Math.max(score, 3);
+      } else if (ket.includes("bocor") || ket.includes("rembes") || ket.includes("low") || ket.includes("anomali")) {
+        score = Math.max(score, 4);
       }
 
       let kondisi: "1-Very Good" | "2-Good" | "3-Fair" | "4-Poor" | "5-Critical";
@@ -391,7 +390,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
       const slices = pc.classes.map(cls => ({
         name: cls,
         value: countMap[cls],
-        color: (pc.colors as Record<string, string>)[cls]
+        color: (pc.colors as unknown as Record<string, string>)[cls]
       }));
 
       return { param: pc.name, option: pieOption(t, slices), total };
@@ -541,7 +540,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
             description="Ringkasan, analisis teknis, dan daftar prioritas tindak lanjut secara keseluruhan."
             stats={[
               { label: "Bushing Terpantau", value: `${stats.totalBushings}`, sub: "Unit" },
-              { label: "Kondisi Critical/Poor", value: `${stats.criticalPoor}`, sub: "Temuan" },
+              { label: "Temuan Anomali", value: `${stats.criticalPoor}`, sub: "Temuan" },
               { label: "Tindak Lanjut (OPEN)", value: `${stats.open}`, sub: "Pekerjaan" },
               { label: "Health Index", value: `${stats.healthIndex}%` },
             ]}
@@ -784,7 +783,7 @@ export function AsesmentBushingView({ rows }: { rows: DBBushingRecord[] }) {
           <div className="absolute right-3 top-3 opacity-10 group-hover:scale-110 transition-transform duration-300">
             <AlertTriangle className="h-12 w-12 text-red-500" />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">Kondisi Critical & Poor</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">Temuan Anomali</span>
           <div className="flex items-baseline gap-2 mt-2">
             <span className="num text-4xl font-extrabold tracking-tight text-red-500">{stats.criticalPoor}</span>
             <span className="text-xs font-bold text-ink-3">Temuan</span>
