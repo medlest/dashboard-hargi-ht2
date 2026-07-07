@@ -1,28 +1,23 @@
 import postgres from "./app/node_modules/postgres/src/index.js";
-
-const sql = postgres('postgresql://ht2_diagus.mjgekmjnsipthcswazid:fNgzSz81Rdg~41F-BUsIyybk31waOGpz@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres', {
-  ssl: 'require'
-});
+import Papa from "./app/node_modules/papaparse/papaparse.js";
 
 async function run() {
-  try {
-    const ce = await sql`SELECT DISTINCT upt FROM hargi_ht2.ce_abo_findings WHERE upt ILIKE '%semarang%'`;
-    console.log('ce_abo_findings semarang:', ce);
-
-    const abo = await sql`SELECT DISTINCT upt FROM hargi_ht2.abo_2026 WHERE upt ILIKE '%semarang%'`;
-    console.log('abo_2026 semarang:', abo);
-
-    const ggn = await sql`SELECT DISTINCT unit FROM hargi_ht2.gangguan_trafo WHERE unit ILIKE '%semarang%'`;
-    console.log('gangguan_trafo semarang:', ggn);
-
-    const all_ce = await sql`SELECT DISTINCT upt FROM hargi_ht2.ce_abo_findings`;
-    console.log('all CE UPTs:', all_ce.map(r => r.upt));
-
-    process.exit(0);
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
+  const ABO_ID = "11HQFitHH8xISZvVxuG0rd0q84Y6tOtCi7jO7wDbUeVs";
+  const ABO_GID = "1761063736";
+  const res = await fetch(`https://docs.google.com/spreadsheets/d/${ABO_ID}/export?format=csv&gid=${ABO_GID}&t=${Date.now()}`);
+  const text = await res.text();
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  
+  const anomalies = new Set();
+  const rawHeaders = Object.keys(parsed.data[0]);
+  
+  for (const row of parsed.data) {
+    const upt = (row["UPT"] || "").toUpperCase();
+    if (upt.includes("SEMARANG")) {
+        const anomali = row["Jenis Anomali"] || row["jenis anomali"] || row[rawHeaders[7]]; // trying to guess which column it is
+        anomalies.add(anomali);
+    }
   }
+  console.log(`Sheet anomalies for UPT Semarang:`, Array.from(anomalies));
 }
-
-run();
+run().catch(console.error);

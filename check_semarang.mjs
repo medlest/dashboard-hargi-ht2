@@ -1,26 +1,36 @@
 import postgres from "./app/node_modules/postgres/src/index.js";
+import Papa from "./app/node_modules/papaparse/papaparse.js";
 
 const sql = postgres('postgresql://ht2_diagus.mjgekmjnsipthcswazid:fNgzSz81Rdg~41F-BUsIyybk31waOGpz@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres', {
   ssl: 'require'
 });
 
 async function run() {
-  try {
-    const rows = await sql`SELECT DISTINCT nama_upt FROM hargi_ht2.asesment_bushing WHERE nama_upt ILIKE '%semarang%'`;
-    console.log('nama_upt matches:', rows);
-
-    const rows2 = await sql`SELECT DISTINCT gardu_induk FROM hargi_ht2.asesment_bushing WHERE gardu_induk ILIKE '%semarang%'`;
-    console.log('gardu_induk matches:', rows2);
-    
-    // Also check other tables if relevant. But let's check distinct nama_upt first to see if UPT Semarang is there.
-    const upts = await sql`SELECT DISTINCT nama_upt FROM hargi_ht2.asesment_bushing`;
-    console.log('All UPTs:', upts.map(u => u.nama_upt));
-
-    process.exit(0);
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
+  const dbRows = await sql`
+    select * from hargi_ht2.abo_2026 
+    where upper(upt) like '%SEMARANG%'
+    and upper(jenis_anomali) like '%TS - REVIEW & TINDAKLANJUT LA%'
+  `;
+  console.log(`DB count for UPT Semarang & TS - Review & Tindaklanjut LA: ${dbRows.length}`);
+  
+  // Let's also check the raw sheet data directly
+  const ABO_ID = "11HQFitHH8xISZvVxuG0rd0q84Y6tOtCi7jO7wDbUeVs";
+  const ABO_GID = "1761063736";
+  const res = await fetch(`https://docs.google.com/spreadsheets/d/${ABO_ID}/export?format=csv&gid=${ABO_GID}&t=${Date.now()}`);
+  const text = await res.text();
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  
+  let sheetCount = 0;
+  for (const row of parsed.data) {
+    const upt = (row["UPT"] || "").toUpperCase();
+    const anomali = (row["Jenis Anomali"] || "").toUpperCase();
+    if (upt.includes("SEMARANG") && anomali.includes("TS - REVIEW & TINDAKLANJUT LA")) {
+      sheetCount++;
+    }
   }
+  console.log(`Sheet count for UPT Semarang & TS - Review & Tindaklanjut LA: ${sheetCount}`);
+  
+  // Let's see what happens during mapping in EF index.ts
+  await sql.end();
 }
-
-run();
+run().catch(console.error);

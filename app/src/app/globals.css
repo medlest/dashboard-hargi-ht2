@@ -5,7 +5,7 @@
 :root {
   --bg: #f3f5f9;
   --bg-photo: url("/backgrounds/gi-light.webp");
-  --bg-veil: linear-gradient(180deg, rgba(243, 245, 249, 0.72) 0%, rgba(243, 245, 249, 0.5) 45%, rgba(243, 245, 249, 0.85) 100%);
+  --bg-veil: linear-gradient(180deg, rgba(243, 245, 249, 0.45) 0%, rgba(243, 245, 249, 0.25) 45%, rgba(243, 245, 249, 0.65) 100%);
   --surface: rgba(255, 255, 255, 0.74);
   --surface-solid: #ffffff;
   --surface-2: rgba(228, 232, 241, 0.85);
@@ -25,7 +25,7 @@
 .dark {
   --bg: #0a101f;
   --bg-photo: url("/backgrounds/gi-dark.webp");
-  --bg-veil: linear-gradient(180deg, rgba(8, 13, 26, 0.68) 0%, rgba(8, 13, 26, 0.46) 45%, rgba(8, 13, 26, 0.86) 100%);
+  --bg-veil: linear-gradient(180deg, rgba(8, 13, 26, 0.45) 0%, rgba(8, 13, 26, 0.25) 45%, rgba(8, 13, 26, 0.65) 100%);
   --surface: rgba(15, 23, 41, 0.72);
   --surface-solid: #101828;
   --surface-2: rgba(26, 37, 60, 0.85);

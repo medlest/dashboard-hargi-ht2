@@ -4,7 +4,7 @@ export default function AhiMtuPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Asset Healthy Index MTU"
+        title="KONDISI AHI MTU"
         subtitle="Monitoring kesehatan aset MTU · UIT Jawa Bagian Tengah"
       />
       

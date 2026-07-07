@@ -32,7 +32,7 @@ export default async function AsesmentBushingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Monitoring Asesment Bushing"
+        title="MONITORING BUSHING"
         subtitle="Sistem Monitoring Hasil Asesment & Kondisi Bushing Trafo · UIT Jawa Bagian Tengah"
         sourceUrl="https://docs.google.com/spreadsheets/d/1_bBncuTGo8s687UOP9XuU1ObhmTxDlPFXZzwVqYBs3M/edit?gid=0#gid=0"
         sheetName="Asesment Bushing"

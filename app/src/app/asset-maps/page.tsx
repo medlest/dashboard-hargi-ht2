@@ -18,11 +18,12 @@ export default async function AssetMapsPage() {
         count(*)::int as total,
         count(distinct trafo_id) filter (where trafo_id <> '')::int as trafo_count,
         coalesce(array_agg(distinct trafo_id) filter (where trafo_id <> ''), '{}') as trafo_ids,
-        jsonb_object_agg(coalesce(nullif(kategori, ''), 'Lainnya'), cnt) as kategori_counts
+        jsonb_object_agg(kat_thn, cnt) as kategori_counts
       from (
-        select gardu, unit, latitude, longitude, kategori,
+        select gardu, unit, latitude, longitude,
+               coalesce(nullif(kategori, ''), 'Lainnya') || ' (' || coalesce(nullif(tahun::text, ''), 'N/A') || ')' as kat_thn,
                trim(regexp_replace(nama_bay, '\s+\d+.*$', '')) as trafo_id,
-               count(*) over (partition by gardu, kategori) as cnt
+               count(*) over (partition by gardu, kategori, tahun) as cnt
         from hargi_ht2.gangguan_trafo
         where latitude ~ '^-?[0-9]+(\.[0-9]+)?$'
           and longitude ~ '^-?[0-9]+(\.[0-9]+)?$'
@@ -42,7 +43,7 @@ export default async function AssetMapsPage() {
     <div className="-mx-4 -mb-12 -mt-4 flex h-dvh min-h-0 flex-col md:-mx-8 md:-mt-6">
       <div className="shrink-0 px-4 pt-4 md:px-8 md:pt-6">
         <PageHeader
-          title="Asset Maps"
+          title="MAPS"
           subtitle="Sebaran Gardu Induk berdasarkan riwayat gangguan trafo"
           sourceUrl={sheetEditUrl(PARETO_SHEET)}
           sheetName={last?.sheet_name ?? null}

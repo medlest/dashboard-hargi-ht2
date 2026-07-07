@@ -3,16 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { Zap, TrendingUp, ClipboardList, Map, LayoutDashboard, ChevronLeft, ChevronRight, Activity, ShieldAlert } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/pareto", label: "Trend Gangguan Trafo", icon: TrendingUp },
-  { href: "/ce-abo", label: "CE Next Level 2026", icon: ClipboardList },
+  { href: "/pareto", label: "GANGGUAN TRAFO", icon: TrendingUp },
+  { href: "/asset-maps", label: "MAPS", icon: Map },
+  { href: "/ce-abo", label: "CE 2026", icon: ClipboardList },
   { href: "/abo-2026", label: "ABO 2026", icon: Zap },
-  { href: "/asset-maps", label: "Asset Maps", icon: Map },
-  { href: "/ahi-mtu", label: "Asset Healthy Index MTU", icon: Activity },
-  { href: "/asesment-bushing", label: "Monitoring Asesment Bushing", icon: ShieldAlert },
+  { href: "/ahi-mtu", label: "KONDISI AHI MTU", icon: Activity },
+  { href: "/asesment-bushing", label: "MONITORING BUSHING", icon: ShieldAlert },
 ];
 
 export function Sidebar() {
@@ -27,7 +28,7 @@ export function Sidebar() {
     >
       <div className={`flex items-center md:mb-8 ${isOpen ? "justify-between" : "justify-center"}`}>
         <Link href="/" className={`flex items-center gap-2.5 ${isOpen ? "md:px-2" : ""}`}>
-          <Zap className="bolt h-6 w-6 shrink-0" fill="currentColor" strokeWidth={0} />
+          <Image src="/logo.jpg" alt="Logo" width={128} height={128} quality={100} className="h-8 w-8 shrink-0 object-cover rounded-full" />
           {isOpen && (
             <div className="leading-tight hidden md:block">
               <div className="text-sm font-bold tracking-wide">Hartrans 2</div>

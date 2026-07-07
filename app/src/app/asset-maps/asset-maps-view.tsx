@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import {
   Crosshair, Plus, Minus, Navigation2, Mountain, Globe, Maximize2, Minimize2,
   ChevronDown, ChevronRight, ListOrdered, Building2, Palette,
-  Filter, Hash, Sun, Zap, X,
+  Filter, Hash, Sun, Zap, X, Ruler,
 } from "lucide-react";
 import { PALETTE } from "@/lib/colors";
 import { HOME_VIEW, MAP_STYLES, type MapColorMode, type MapStyleKey } from "./gi-map";
@@ -110,7 +110,7 @@ function GroupButton({
 export function AssetMapsView({ points }: { points: GiPoint[] }) {
   const { resolvedTheme } = useTheme();
   const userOverrodeStyle = useRef(false);
-  const [styleKey, setStyleKey] = useState<MapStyleKey>("dark");
+  const [styleKey, setStyleKey] = useState<MapStyleKey>("google");
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   const [expanded, setExpanded] = useState<MenuKey>("gi");
   const [colorMode, setColorMode] = useState<MapColorMode>("intensitas");
@@ -121,6 +121,11 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
   const [is3D, setIs3D] = useState(false);
   const [isGlobe, setIsGlobe] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMeasuring, setIsMeasuring] = useState(false);
+  const [measureNodes, setMeasureNodes] = useState<GiPoint[]>([]);
+  const [routeGeojson, setRouteGeojson] = useState<any>(null);
+  const [routeDistance, setRouteDistance] = useState<number | null>(null);
+  const [isRouting, setIsRouting] = useState(false);
   const [selected, setSelected] = useState<GiPoint | null>(null);
   const mapRef = useRef<MapRef | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -131,7 +136,7 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
   // Style map sync sama theme app — stop sync kalau user pilih manual
   useEffect(() => {
     if (!userOverrodeStyle.current && resolvedTheme) {
-      setStyleKey(resolvedTheme === "light" ? "light" : "dark");
+      setStyleKey("google"); // Default ke Google Maps sesuai request
     }
   }, [resolvedTheme]);
 
@@ -251,6 +256,82 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
     return r > 0.67 ? "#ef4444" : r > 0.34 ? "#f59e0b" : "#10b981";
   };
 
+  // Haversine formula
+  const getDistance = (p1: GiPoint, p2: GiPoint) => {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (p2.lat - p1.lat) * (Math.PI / 180);
+    const dLon = (p2.lng - p1.lng) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(p1.lat * (Math.PI / 180)) *
+        Math.cos(p2.lat * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const handleSelect = (p: GiPoint | null) => {
+    if (!isMeasuring) {
+      setSelected(p);
+      return;
+    }
+    if (!p) return;
+
+    setMeasureNodes((prev) => {
+      if (prev.length === 2) {
+        setRouteGeojson(null);
+        setRouteDistance(null);
+        return [p]; // start new measurement
+      }
+      if (prev.find((n) => n.gardu === p.gardu)) return prev; // ignore same node
+      return [...prev, p];
+    });
+  };
+
+  // Fetch route when 2 nodes are selected
+  useEffect(() => {
+    if (measureNodes.length !== 2) return;
+    const [p1, p2] = measureNodes;
+    
+    let isCancelled = false;
+    setIsRouting(true);
+    setRouteGeojson(null);
+    setRouteDistance(null);
+
+    const url = `https://router.project-osrm.org/route/v1/driving/${p1.lng},${p1.lat};${p2.lng},${p2.lat}?overview=full&geometries=geojson`;
+    
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (isCancelled) return;
+        if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          setRouteGeojson({
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: route.geometry,
+                properties: {},
+              },
+            ],
+          });
+          setRouteDistance(route.distance / 1000); // meters to km
+        }
+      })
+      .catch(() => {
+        // silently fail and fallback to haversine line
+      })
+      .finally(() => {
+        if (!isCancelled) setIsRouting(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [measureNodes]);
+
   /* ── Adaptive theme: panel ikut terang/gelapnya BASEMAP (konsep StandardMap) ── */
   const isLight = styleKey === "light" || styleKey === "osm";
   const cardBg = isLight ? "bg-white/75" : "bg-black/60";
@@ -276,10 +357,56 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
           unitColors={unitColors}
           showGi={showGi}
           showLabels={showLabels}
-          selectedGardu={selected?.gardu ?? null}
-          onSelect={setSelected}
+          selectedGardu={isMeasuring ? null : (selected?.gardu ?? null)}
+          measureNodes={measureNodes}
+          routeGeojson={routeGeojson}
+          onSelect={handleSelect}
           onMapRef={(r) => { mapRef.current = r; setMapInst(r); }}
         />
+
+        {/* ═══ UI PENGUKUR JARAK (Tengah Atas) ═══ */}
+        {isMeasuring && (
+          <div className={`absolute top-4 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 ${tx}`}>
+            <div className={`${panel} flex items-center gap-3 px-4 py-2 font-semibold shadow-lg`}>
+              <Ruler className="h-4 w-4 text-cyan-500" />
+              <div className="text-sm">
+                {measureNodes.length === 0 && <span>Pilih GI pertama</span>}
+                {measureNodes.length === 1 && <span>Pilih GI kedua</span>}
+                {measureNodes.length === 2 && (
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-cyan-500">{measureNodes[0].gardu.replace(/^GIS?T?\s*\d+\s*KV\s*/i, "")}</span>
+                      <span className="text-ink-3">→</span>
+                      <span className="text-cyan-500">{measureNodes[1].gardu.replace(/^GIS?T?\s*\d+\s*KV\s*/i, "")}</span>
+                    </div>
+                    <div className="hidden md:block text-ink-3">|</div>
+                    <div className="flex items-center gap-2 font-bold">
+                      {isRouting ? (
+                        <span className="text-ink-3 flex items-center gap-1"><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"/> Mencari rute...</span>
+                      ) : routeDistance !== null ? (
+                        <span className="text-green-500">{routeDistance.toFixed(1)} km (Jalan Raya)</span>
+                      ) : (
+                        <span className="text-amber-500">{getDistance(measureNodes[0], measureNodes[1]).toFixed(1)} km (Garis Lurus)</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMeasureNodes([]);
+                  setRouteGeojson(null);
+                  setRouteDistance(null);
+                }}
+                className="ml-2 rounded p-1 hover:bg-black/10 hover:text-red-500 dark:hover:bg-white/10"
+                title="Reset"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ═══ KIRI-ATAS: title badge + panel layer (konsep StandardMap) ═══ */}
         <div className={`absolute bottom-3 left-3 top-3 z-20 flex w-56 flex-col gap-2 overflow-y-auto scrollbar-thin ${tx}`}>
@@ -389,6 +516,20 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
             <button type="button" onClick={resetNorth} className={railBtn} title="Reset View">
               <CompassNeedle map={mapInst} />
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMeasuring(!isMeasuring);
+                setMeasureNodes([]);
+                setRouteGeojson(null);
+                setRouteDistance(null);
+                setSelected(null);
+              }}
+              className={`${railBtn} ${isMeasuring ? "bg-cyan-500/80 text-white" : ""}`}
+              title="Ukur Jarak"
+            >
+              <Ruler className="h-4 w-4" />
+            </button>
             <button type="button" onClick={toggle3D} className={`${railBtn} ${is3D ? "bg-green-500/80 text-white" : ""}`} title="3D"><Mountain className="h-4 w-4" /></button>
             <button type="button" onClick={toggleGlobe} className={`${railBtn} ${isGlobe ? "bg-blue-500/80 text-white" : ""}`} title="Globe"><Globe className="h-4 w-4" /></button>
             <div className={`h-px ${sep}`} />
@@ -451,13 +592,12 @@ export function AssetMapsView({ points }: { points: GiPoint[] }) {
               ))}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 max-h-40 overflow-y-auto scrollbar-thin pr-2">
               {Object.entries(selected.kategori_counts)
                 .sort((a, b) => b[1] - a[1])
-                .slice(0, 4)
                 .map(([k, v]) => (
                   <div key={k} className="flex items-center gap-2 text-[10px]">
-                    <span className={`w-24 truncate ${mut}`}>{k}</span>
+                    <span className={`w-28 truncate ${mut}`} title={k}>{k}</span>
                     <div className={`h-1.5 flex-1 overflow-hidden rounded-full ${isLight ? "bg-black/10" : "bg-white/10"}`}>
                       <div className="h-full rounded-full bg-amber-500" style={{ width: `${(v / selected.total) * 100}%` }} />
                     </div>

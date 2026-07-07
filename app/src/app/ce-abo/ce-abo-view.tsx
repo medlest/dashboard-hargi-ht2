@@ -300,7 +300,7 @@ export function CeAboView({ rows }: { rows: CeRow[] }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {agg.levelSummary.map((l) => (
+                  {agg.levelSummaryTerkini.map((l) => (
                     <tr key={l.level} className="border-b border-edge/50">
                       <td className="py-1.5 pr-2 font-medium">{l.level}</td>
                       <td className="num px-1.5 text-center text-blue-500">{l.vg}</td>

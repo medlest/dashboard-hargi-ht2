@@ -7,15 +7,15 @@ async function run() {
   const text = await res.text();
   const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
   
-  let count = 0;
+  const counts = {};
   for (const row of parsed.data) {
     const upt = (row["UPT"] || "").toUpperCase();
-    const anomali = (row["Jenis Anomali"] || "").toUpperCase();
-    
-    if (upt.includes("SEMARANG") && anomali.includes("TS - REVIEW & TINDAKLANJUT LA")) {
-        count++;
+    const anomali = (row["JENIS ANOMALI"] || "").trim();
+    if (upt.includes("SEMARANG")) {
+        counts[anomali] = (counts[anomali] || 0) + 1;
     }
   }
-  console.log(`Sheet count for UPT Semarang & TS - Review & Tindaklanjut LA is: ${count}`);
+  console.log("Anomalies for UPT Semarang in GID 1761063736:");
+  console.log(counts);
 }
 run().catch(console.error);

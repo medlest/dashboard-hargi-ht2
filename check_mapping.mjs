@@ -7,15 +7,13 @@ async function run() {
   const text = await res.text();
   const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
   
-  let count = 0;
-  for (const row of parsed.data) {
-    const upt = (row["UPT"] || "").toUpperCase();
-    const anomali = (row["Jenis Anomali"] || "").toUpperCase();
-    
-    if (upt.includes("SEMARANG") && anomali.includes("TS - REVIEW & TINDAKLANJUT LA")) {
-        count++;
-    }
-  }
-  console.log(`Sheet count for UPT Semarang & TS - Review & Tindaklanjut LA is: ${count}`);
+  const headers = Object.keys(parsed.data[0]);
+  console.log("Headers:", headers);
+  
+  const anomaliCol = headers.find((h) => {
+    const low = h.toLowerCase();
+    return low.includes("jenis") && low.includes("anomali");
+  });
+  console.log("Mapped Jenis Anomali column:", anomaliCol);
 }
 run().catch(console.error);

@@ -126,7 +126,7 @@ function countByCond<T>(rows: T[], k1: (r: T) => string, k2: (r: T) => string) {
 export function ceAggregate(rows: CeRow[]) {
   // Hanya baris dengan status OPEN atau CLOSE yang dianggap sebagai "Temuan" (Anomali)
   const findingRows = rows.filter(r => 
-    ["OPEN", "CLOSE"].includes((r.status_terkini || "").toUpperCase())
+    ["OPEN", "CLOSE"].includes((r.status_terkini || "").toUpperCase().trim())
   );
 
   const total = findingRows.length;
@@ -156,8 +156,21 @@ export function ceAggregate(rows: CeRow[]) {
     .slice(0, 15);
   const byLevelUraian = countBy2(findingRows, (r) => r.level_anomali, (r) => r.uraian);
 
-  // Tabel ringkasan level anomali: breakdown VG/G/F/P/C per level (fokus TEMUAN)
+  // Tabel ringkasan level anomali: breakdown VG/G/F/P/C per level (fokus TEMUAN untuk TARGET / Akhir)
   const levelSummary = [...byLevel.entries()]
+    .map(([level, conds]) => {
+      const vg = conds.get("Very Good") ?? 0;
+      const g = conds.get("Good") ?? 0;
+      const f = conds.get("Fair") ?? 0;
+      const p = conds.get("Poor") ?? 0;
+      const c = conds.get("Critical") ?? 0;
+      return { level, vg, g, f, p, c, total: vg + g + f + p + c };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  // Tambahan untuk tabel Kondisi Terkini
+  const byLevelTerkini = countByCond(findingRows, (r) => r.level_anomali, (r) => r.kondisi_terkini);
+  const levelSummaryTerkini = [...byLevelTerkini.entries()]
     .map(([level, conds]) => {
       const vg = conds.get("Very Good") ?? 0;
       const g = conds.get("Good") ?? 0;
@@ -213,7 +226,7 @@ export function ceAggregate(rows: CeRow[]) {
   return {
     stats: { total, closed, open, progress },
     kaSummary, kondisiAwal, kondisiTerkini, byUpt, bySubBidang, byLevel,
-    uraianTop, byLevelUraian, levelSummary, uptSummary, gisSummary,
+    uraianTop, byLevelUraian, levelSummary, levelSummaryTerkini, uptSummary, gisSummary,
     focusUraian, priorityList,
   };
 }

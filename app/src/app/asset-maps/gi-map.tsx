@@ -10,7 +10,7 @@ import type { StyleSpecification } from "maplibre-gl";
 const SEVERITY = { low: "#10b981", mid: "#f59e0b", high: "#ef4444" };
 
 export type MapColorMode = "intensitas" | "upt";
-export type MapStyleKey = "dark" | "light" | "satellite" | "osm";
+export type MapStyleKey = "dark" | "light" | "satellite" | "osm" | "google" | "hybrid";
 
 const GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
 
@@ -65,16 +65,34 @@ export const MAP_STYLES: Record<MapStyleKey, { label: string; style: string | St
       "© OpenStreetMap contributors",
     ),
   },
+  google: {
+    label: "G-Street",
+    style: rasterStyle(
+      "google-street",
+      ["https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"],
+      "© Google",
+    ),
+  },
+  hybrid: {
+    label: "G-Hybrid",
+    style: rasterStyle(
+      "google-hybrid",
+      ["https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"],
+      "© Google",
+    ),
+  },
 };
 
 export function GiMap({
   points,
-  styleKey = "dark",
+  styleKey = "google",
   colorMode = "intensitas",
   unitColors = {},
   showGi = true,
   showLabels = true,
   selectedGardu = null,
+  measureNodes = [],
+  routeGeojson = null,
   onSelect,
   onMapRef,
   onMove,
@@ -86,6 +104,8 @@ export function GiMap({
   showGi?: boolean;
   showLabels?: boolean;
   selectedGardu?: string | null;
+  measureNodes?: GiPoint[];
+  routeGeojson?: any;
   onSelect?: (p: GiPoint | null) => void;
   onMapRef?: (ref: MapRef | null) => void;
   onMove?: (e: ViewStateChangeEvent) => void;
@@ -120,6 +140,26 @@ export function GiMap({
     }),
     [points, max, colorMode, unitColors],
   );
+
+  const measureGeojson = useMemo(() => {
+    if (!measureNodes || measureNodes.length !== 2) return null;
+    return {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          geometry: {
+            type: "LineString" as const,
+            coordinates: [
+              [measureNodes[0].lng, measureNodes[0].lat],
+              [measureNodes[1].lng, measureNodes[1].lat],
+            ],
+          },
+          properties: {},
+        },
+      ],
+    };
+  }, [measureNodes]);
 
   function onClick(e: MapLayerMouseEvent) {
     const f = e.features?.[0];
@@ -244,6 +284,35 @@ export function GiMap({
               }}
             />
           )}
+        </Source>
+      )}
+
+      {measureGeojson && (
+        <Source id="measure" type="geojson" data={measureGeojson}>
+          <Layer
+            id="measure-line"
+            type="line"
+            paint={{
+              "line-color": "#06b6d4", // cyan-500
+              "line-width": routeGeojson ? 1.5 : 3,
+              "line-dasharray": [2, 2],
+              "line-opacity": routeGeojson ? 0.6 : 1,
+            }}
+          />
+        </Source>
+      )}
+
+      {routeGeojson && (
+        <Source id="route" type="geojson" data={routeGeojson}>
+          <Layer
+            id="route-line"
+            type="line"
+            paint={{
+              "line-color": "#22c55e", // green-500
+              "line-width": 4,
+              "line-opacity": 0.8,
+            }}
+          />
         </Source>
       )}
     </Map>

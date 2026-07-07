@@ -96,11 +96,10 @@ export function Abo2026View({
   ]);
 
   const anomaliLabels = [...agg.byAnomali.keys()].sort((a, b) => agg.byAnomali.get(b)! - agg.byAnomali.get(a)!);
-  const shortLabels = anomaliLabels.map(l => l.length > 25 ? l.slice(0, 22) + "..." : l);
   
   const anomaliOpt = stackedBarOption(
     t,
-    shortLabels,
+    anomaliLabels,
     [
       {
         name: "Close",
